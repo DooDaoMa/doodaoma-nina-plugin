@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using NINA.Core.Utility;
 using NINA.Core.Utility.Notification;
 using NINA.Equipment.Interfaces.Mediator;
+using NINA.Image.Interfaces;
 using NINA.Plugin;
 using NINA.Plugin.Interfaces;
 using NINA.Profile.Interfaces;
@@ -27,6 +28,7 @@ namespace Doodaoma.NINA.Doodaoma {
     public class Doodaoma : PluginBase, INotifyPropertyChanged {
         private readonly IDeepSkyObjectSearchVM deepSkyObjectSearchVm;
         private readonly IImageSaveMediator imageSaveMediator;
+        private readonly IImageDataFactory imageDataFactory;
         private readonly DefaultFileUploader fileUploader;
         private readonly WebsocketClient socketClient;
         private readonly HttpClient httpClient;
@@ -60,23 +62,24 @@ namespace Doodaoma.NINA.Doodaoma {
         [ImportingConstructor]
         public Doodaoma(IDeepSkyObjectSearchVM deepSkyObjectSearchVm, IImagingMediator imagingMediator,
             ITelescopeMediator telescopeMediator, IImageSaveMediator imageSaveMediator,
-            IProfileService profileService) {
+            IProfileService profileService, IImageDataFactory imageDataFactory) {
             this.deepSkyObjectSearchVm = deepSkyObjectSearchVm;
             this.imageSaveMediator = imageSaveMediator;
+            this.imageDataFactory = imageDataFactory;
 
             ICameraInfoProvider cameraInfoProvider = new FakeCameraInfoProvider();
             socketClient = new SocketClientFactory(cameraInfoProvider).Create();
-            SocketHandler handler = new SocketHandler(cameraInfoProvider, this.deepSkyObjectSearchVm, telescopeMediator,
-                imagingMediator, profileService);
-
             httpClient = new HttpClient();
             fileUploader = new DefaultFileUploader(httpClient);
 
             this.imageSaveMediator.ImageSaved += ImageSaveMediatorOnImageSaved;
             IsConnectedEvent += OnIsConnectedEvent;
+
+            SocketHandler handler = new SocketHandler(this.deepSkyObjectSearchVm, telescopeMediator,
+                imagingMediator, profileService);
             handler.UserIdChangeEvent += OnUserIdChangeEvent;
             handler.UserDisconnectedEvent += HandlerOnUserDisconnectedEvent;
-
+            handler.UploadFileEvent += HandlerOnUploadFileEvent;
             socketClient.MessageReceived
                 .Where(msg => msg.Text != null)
                 .Where(msg => msg.Text.StartsWith("{") && msg.Text.EndsWith("}"))
@@ -92,6 +95,30 @@ namespace Doodaoma.NINA.Doodaoma {
         private void HandlerOnUserDisconnectedEvent(object sender, EventArgs e) {
             currentUserId = null;
             Notification.ShowInformation("User disconnected");
+        }
+
+        private async void HandlerOnUploadFileEvent(object sender, UploadFileEventArgs e) {
+            try {
+                byte[] fileBytes;
+
+                BitmapEncoder encoder = new PngBitmapEncoder();
+                using (MemoryStream stream = new MemoryStream()) {
+                    encoder.Frames.Add(BitmapFrame.Create(e.ImageData.RenderBitmapSource()));
+                    encoder.Save(stream);
+                    fileBytes = stream.ToArray();
+                }
+
+                UploadFileResponse response = await fileUploader.Upload(
+                    new DefaultFileUploader.Params(
+                        currentUserId,
+                        fileBytes,
+                        Path.GetFileName(e.Path)
+                    )
+                );
+                Notification.ShowInformation(response.Message);
+            } catch (Exception exception) {
+                Notification.ShowError(exception.ToString());
+            }
         }
 
         private async void ImageSaveMediatorOnImageSaved(object sender, ImageSavedEventArgs e) {
@@ -111,7 +138,6 @@ namespace Doodaoma.NINA.Doodaoma {
                     encoder.Frames.Add(BitmapFrame.Create(e.Image));
                     encoder.Save(stream);
                     fileBytes = stream.ToArray();
-                    stream.Close();
                 }
 
                 UploadFileResponse response = await fileUploader.Upload(

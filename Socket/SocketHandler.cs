@@ -1,5 +1,4 @@
-﻿using Doodaoma.NINA.Doodaoma.Provider;
-using Doodaoma.NINA.Doodaoma.Socket.Models;
+﻿using Doodaoma.NINA.Doodaoma.Socket.Models;
 using Newtonsoft.Json.Linq;
 using NINA.Core.Utility.Notification;
 using NINA.Equipment.Interfaces.Mediator;
@@ -9,22 +8,27 @@ using NINA.Image.Interfaces;
 using NINA.Profile.Interfaces;
 using NINA.WPF.Base.Interfaces.ViewModel;
 using System;
+using System.IO;
 using System.Threading;
 
 namespace Doodaoma.NINA.Doodaoma.Socket {
+    internal struct UploadFileEventArgs {
+        public IImageData ImageData { get; set; }
+        public string Path { get; set; }
+    }
+
     internal class SocketHandler {
-        private readonly ICameraInfoProvider cameraInfoProvider;
         private readonly IDeepSkyObjectSearchVM deepSkyObjectSearchVm;
         private readonly ITelescopeMediator telescopeMediator;
         private readonly IImagingMediator imagingMediator;
         private readonly IProfileService profileService;
 
         public event EventHandler<string> UserIdChangeEvent;
-        public event EventHandler UserDisconnectedEvent; 
+        public event EventHandler UserDisconnectedEvent;
+        public event EventHandler<UploadFileEventArgs> UploadFileEvent;
 
-        public SocketHandler(ICameraInfoProvider cameraInfoProvider, IDeepSkyObjectSearchVM deepSkyObjectSearchVm,
+        public SocketHandler(IDeepSkyObjectSearchVM deepSkyObjectSearchVm,
             ITelescopeMediator telescopeMediator, IImagingMediator imagingMediator, IProfileService profileService) {
-            this.cameraInfoProvider = cameraInfoProvider;
             this.deepSkyObjectSearchVm = deepSkyObjectSearchVm;
             this.telescopeMediator = telescopeMediator;
             this.imagingMediator = imagingMediator;
@@ -65,14 +69,18 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                         ExposureTime = payload?.ExposureTime ?? 1.0
                     };
                     try {
-                        IExposureData exposureData = await imagingMediator.CaptureImage(captureSequence, CancellationToken.None, null);
+                        IExposureData exposureData =
+                            await imagingMediator.CaptureImage(captureSequence, CancellationToken.None, null);
                         IImageData imageData = await exposureData.ToImageData();
                         FileSaveInfo fileSaveInfo = new FileSaveInfo(profileService);
                         string savePath = await imageData.SaveToDisk(fileSaveInfo);
-                        Notification.ShowInformation("Save to path " + savePath);
+                        Notification.ShowInformation("Saved to path " + savePath);
+                        UploadFileEvent?.Invoke(this,
+                            new UploadFileEventArgs { ImageData = imageData, Path = savePath });
                     } catch (Exception e) {
                         Notification.ShowError(e.ToString());
                     }
+
                     break;
                 }
                 case "cancelCapture": {
