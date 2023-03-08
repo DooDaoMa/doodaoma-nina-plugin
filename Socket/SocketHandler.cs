@@ -61,7 +61,9 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                 }
                 case "capture": {
                     CapturePayload payload = parsedMessage["payload"]?.ToObject<CapturePayload>();
-                    CaptureSequence captureSequence = new CaptureSequence();
+                    CaptureSequence captureSequence = new CaptureSequence {
+                        ExposureTime = payload?.ExposureTime ?? 1.0
+                    };
                     try {
                         IExposureData exposureData = await imagingMediator.CaptureImage(captureSequence, CancellationToken.None, null);
                         IImageData imageData = await exposureData.ToImageData();
