@@ -24,10 +24,19 @@ namespace Doodaoma.NINA.Doodaoma.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("wss://doodaoma-server-dev.up.railway.app")]
+        [global::System.Configuration.DefaultSettingValueAttribute("ws://localhost:8080")]
         public string ServerSocketUrl {
             get {
                 return ((string)(this["ServerSocketUrl"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://localhost:8080")]
+        public string ServerUrl {
+            get {
+                return ((string)(this["ServerUrl"]));
             }
         }
     }

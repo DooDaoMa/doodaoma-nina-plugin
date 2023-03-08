@@ -1,5 +1,6 @@
-﻿using Doodaoma.NINA.Doodaoma.Uploader.Models;
-using Newtonsoft.Json.Linq;
+﻿using Doodaoma.NINA.Doodaoma.Properties;
+using Doodaoma.NINA.Doodaoma.Uploader.Models;
+using Newtonsoft.Json;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -26,13 +27,12 @@ namespace Doodaoma.NINA.Doodaoma.Uploader {
                 }
             };
             HttpResponseMessage response =
-                await httpClient.PostAsync("https://doodaoma-server-dev.up.railway.app/api/images", form);
+                await httpClient.PostAsync(Settings.Default.ServerUrl + "/api/images", form);
             string responseMessage = await response.Content.ReadAsStringAsync();
-            JObject responseMessageJson = JObject.Parse(responseMessage);
-            UploadFileResponse uploadFileResponse = responseMessageJson.ToObject<UploadFileResponse>();
+            UploadFileResponse uploadFileResponse = JsonConvert.DeserializeObject<UploadFileResponse>(responseMessage);
 
             if (!response.IsSuccessStatusCode) {
-                throw new IOException(uploadFileResponse.Message ?? "UNKNOWN ERROR");
+                throw new IOException(uploadFileResponse.Message ?? "Unknown error message");
             }
 
             return uploadFileResponse;

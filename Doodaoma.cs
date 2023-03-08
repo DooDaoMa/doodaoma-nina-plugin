@@ -8,6 +8,7 @@ using NINA.Core.Utility.Notification;
 using NINA.Equipment.Interfaces.Mediator;
 using NINA.Plugin;
 using NINA.Plugin.Interfaces;
+using NINA.Profile.Interfaces;
 using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.ViewModel;
 using System;
@@ -57,15 +58,16 @@ namespace Doodaoma.NINA.Doodaoma {
         }
 
         [ImportingConstructor]
-        public Doodaoma(IDeepSkyObjectSearchVM deepSkyObjectSearchVm, ICameraMediator cameraMediator,
-            ITelescopeMediator telescopeMediator, IImageSaveMediator imageSaveMediator) {
+        public Doodaoma(IDeepSkyObjectSearchVM deepSkyObjectSearchVm, IImagingMediator imagingMediator,
+            ITelescopeMediator telescopeMediator, IImageSaveMediator imageSaveMediator,
+            IProfileService profileService) {
             this.deepSkyObjectSearchVm = deepSkyObjectSearchVm;
             this.imageSaveMediator = imageSaveMediator;
 
             ICameraInfoProvider cameraInfoProvider = new FakeCameraInfoProvider();
             socketClient = new SocketClientFactory(cameraInfoProvider).Create();
-            SocketHandler handler = new SocketHandler(cameraInfoProvider, deepSkyObjectSearchVm, telescopeMediator,
-                cameraMediator);
+            SocketHandler handler = new SocketHandler(cameraInfoProvider, this.deepSkyObjectSearchVm, telescopeMediator,
+                imagingMediator, profileService);
 
             httpClient = new HttpClient();
             fileUploader = new DefaultFileUploader(httpClient);
@@ -73,6 +75,8 @@ namespace Doodaoma.NINA.Doodaoma {
             this.imageSaveMediator.ImageSaved += ImageSaveMediatorOnImageSaved;
             IsConnectedEvent += OnIsConnectedEvent;
             handler.UserIdChangeEvent += OnUserIdChangeEvent;
+            handler.UserDisconnectedEvent += HandlerOnUserDisconnectedEvent;
+
             socketClient.MessageReceived
                 .Where(msg => msg.Text != null)
                 .Where(msg => msg.Text.StartsWith("{") && msg.Text.EndsWith("}"))
@@ -82,10 +86,20 @@ namespace Doodaoma.NINA.Doodaoma {
 
         private void OnUserIdChangeEvent(object sender, string userId) {
             currentUserId = userId;
+            Notification.ShowInformation("Current user " + currentUserId);
+        }
+
+        private void HandlerOnUserDisconnectedEvent(object sender, EventArgs e) {
+            currentUserId = null;
+            Notification.ShowInformation("User disconnected");
         }
 
         private async void ImageSaveMediatorOnImageSaved(object sender, ImageSavedEventArgs e) {
             if (!isConnected) {
+                return;
+            }
+
+            if (currentUserId == null) {
                 return;
             }
 
@@ -100,8 +114,13 @@ namespace Doodaoma.NINA.Doodaoma {
                     stream.Close();
                 }
 
-                UploadFileResponse response =
-                    await fileUploader.Upload(new DefaultFileUploader.Params(currentUserId, fileBytes, "filename"));
+                UploadFileResponse response = await fileUploader.Upload(
+                    new DefaultFileUploader.Params(
+                        currentUserId,
+                        fileBytes,
+                        Path.GetFileName(e.PathToImage.AbsolutePath)
+                    )
+                );
                 Notification.ShowInformation(response.Message);
             } catch (Exception exception) {
                 Notification.ShowError(exception.ToString());
@@ -116,7 +135,7 @@ namespace Doodaoma.NINA.Doodaoma {
                 Notification.ShowError(e.ToString());
                 return false;
             } finally {
-                IsConnectedEvent?.Invoke(this, socketClient.IsStarted);
+                IsConnectedEvent?.Invoke(this, socketClient.IsRunning);
             }
         }
 
@@ -139,7 +158,7 @@ namespace Doodaoma.NINA.Doodaoma {
         }
 
         private void TargetSearchResultOnPropertyChanged(object sender, PropertyChangedEventArgs e) {
-            Notification.ShowInformation(e.ToString());
+            Notification.ShowInformation(e.PropertyName);
             JObject deepSkyObjectsMessage = JObject.FromObject(new {
                 type = "deepSkyObjects", payload = new { results = deepSkyObjectSearchVm.TargetSearchResult.Result }
             });

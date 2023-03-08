@@ -1,29 +1,34 @@
 ﻿using Doodaoma.NINA.Doodaoma.Provider;
 using Doodaoma.NINA.Doodaoma.Socket.Models;
 using Newtonsoft.Json.Linq;
-using NINA.Astrometry;
 using NINA.Core.Utility.Notification;
 using NINA.Equipment.Interfaces.Mediator;
 using NINA.Equipment.Model;
+using NINA.Image.FileFormat;
+using NINA.Image.Interfaces;
+using NINA.Profile.Interfaces;
 using NINA.WPF.Base.Interfaces.ViewModel;
 using System;
-using Websocket.Client;
+using System.Threading;
 
 namespace Doodaoma.NINA.Doodaoma.Socket {
     internal class SocketHandler {
         private readonly ICameraInfoProvider cameraInfoProvider;
         private readonly IDeepSkyObjectSearchVM deepSkyObjectSearchVm;
         private readonly ITelescopeMediator telescopeMediator;
-        private readonly ICameraMediator cameraMediator;
+        private readonly IImagingMediator imagingMediator;
+        private readonly IProfileService profileService;
 
         public event EventHandler<string> UserIdChangeEvent;
+        public event EventHandler UserDisconnectedEvent; 
 
         public SocketHandler(ICameraInfoProvider cameraInfoProvider, IDeepSkyObjectSearchVM deepSkyObjectSearchVm,
-            ITelescopeMediator telescopeMediator, ICameraMediator cameraMediator) {
+            ITelescopeMediator telescopeMediator, IImagingMediator imagingMediator, IProfileService profileService) {
             this.cameraInfoProvider = cameraInfoProvider;
             this.deepSkyObjectSearchVm = deepSkyObjectSearchVm;
             this.telescopeMediator = telescopeMediator;
-            this.cameraMediator = cameraMediator;
+            this.imagingMediator = imagingMediator;
+            this.profileService = profileService;
         }
 
         public async void HandleMessage(string message) {
@@ -35,6 +40,10 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                 case "setUserId": {
                     SetUserIdPayload payload = parsedMessage["payload"]?.ToObject<SetUserIdPayload>();
                     UserIdChangeEvent?.Invoke(this, payload?.UserId);
+                    break;
+                }
+                case "resetUserId": {
+                    UserDisconnectedEvent?.Invoke(this, EventArgs.Empty);
                     break;
                 }
                 case "setTargetName": {
@@ -51,6 +60,17 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                     break;
                 }
                 case "capture": {
+                    CapturePayload payload = parsedMessage["payload"]?.ToObject<CapturePayload>();
+                    CaptureSequence captureSequence = new CaptureSequence();
+                    try {
+                        IExposureData exposureData = await imagingMediator.CaptureImage(captureSequence, CancellationToken.None, null);
+                        IImageData imageData = await exposureData.ToImageData();
+                        FileSaveInfo fileSaveInfo = new FileSaveInfo(profileService);
+                        string savePath = await imageData.SaveToDisk(fileSaveInfo);
+                        Notification.ShowInformation("Save to path " + savePath);
+                    } catch (Exception e) {
+                        Notification.ShowError(e.ToString());
+                    }
                     break;
                 }
                 case "cancelCapture": {

@@ -1,5 +1,8 @@
-﻿namespace Doodaoma.NINA.Doodaoma.Socket.Models {
+﻿using Newtonsoft.Json;
+
+namespace Doodaoma.NINA.Doodaoma.Socket.Models {
     public class SetUserIdPayload {
-        public string UserId { get; }
+        [JsonProperty(PropertyName = "userId")]
+        public string UserId { get; set; }
     }
 }

@@ -1,9 +1,8 @@
-﻿namespace Doodaoma.NINA.Doodaoma.Uploader.Models {
-    public struct UploadFileResponse {
-        public string Message { get; }
+﻿using Newtonsoft.Json;
 
-        public UploadFileResponse(string message) {
-            Message = message;
-        }
+namespace Doodaoma.NINA.Doodaoma.Uploader.Models {
+    public class UploadFileResponse {
+        [JsonProperty(PropertyName = "message")]
+        public string Message { get; set; }
     }
 }

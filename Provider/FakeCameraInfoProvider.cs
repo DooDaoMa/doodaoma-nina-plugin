@@ -5,7 +5,7 @@
         }
 
         public string GetDeviceId() {
-            return "TestDeviceId";
+            return "Test Device Id";
         }
 
         public string GetDriverInfo() {
