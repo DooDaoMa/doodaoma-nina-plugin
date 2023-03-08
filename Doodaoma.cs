@@ -30,6 +30,7 @@ namespace Doodaoma.NINA.Doodaoma {
         private readonly WebsocketClient socketClient;
         private readonly HttpClient httpClient;
         private event EventHandler<bool> IsConnectedEvent;
+        private string currentUserId;
 
         public event PropertyChangedEventHandler PropertyChanged;
         public IAsyncCommand ConnectToServerCommand { get; }
@@ -56,25 +57,31 @@ namespace Doodaoma.NINA.Doodaoma {
         }
 
         [ImportingConstructor]
-        public Doodaoma(IImageSaveMediator imageSaveMediator, ICameraMediator cameraMediator,
-            IDeepSkyObjectSearchVM deepSkyObjectSearchVm) {
+        public Doodaoma(IDeepSkyObjectSearchVM deepSkyObjectSearchVm, ICameraMediator cameraMediator,
+            ITelescopeMediator telescopeMediator, IImageSaveMediator imageSaveMediator) {
             this.deepSkyObjectSearchVm = deepSkyObjectSearchVm;
             this.imageSaveMediator = imageSaveMediator;
 
             ICameraInfoProvider cameraInfoProvider = new FakeCameraInfoProvider();
             socketClient = new SocketClientFactory(cameraInfoProvider).Create();
-            SocketHandler handler = new SocketHandler(socketClient, cameraInfoProvider, deepSkyObjectSearchVm);
+            SocketHandler handler = new SocketHandler(cameraInfoProvider, deepSkyObjectSearchVm, telescopeMediator,
+                cameraMediator);
 
             httpClient = new HttpClient();
             fileUploader = new DefaultFileUploader(httpClient);
 
             this.imageSaveMediator.ImageSaved += ImageSaveMediatorOnImageSaved;
             IsConnectedEvent += OnIsConnectedEvent;
+            handler.UserIdChangeEvent += OnUserIdChangeEvent;
             socketClient.MessageReceived
                 .Where(msg => msg.Text != null)
                 .Where(msg => msg.Text.StartsWith("{") && msg.Text.EndsWith("}"))
                 .Subscribe(msg => handler.HandleMessage(msg.Text));
             ConnectToServerCommand = new AsyncCommand<bool>(ConnectToServer);
+        }
+
+        private void OnUserIdChangeEvent(object sender, string userId) {
+            currentUserId = userId;
         }
 
         private async void ImageSaveMediatorOnImageSaved(object sender, ImageSavedEventArgs e) {
@@ -94,7 +101,7 @@ namespace Doodaoma.NINA.Doodaoma {
                 }
 
                 UploadFileResponse response =
-                    await fileUploader.Upload(new DefaultFileUploader.Params("", fileBytes, "filename"));
+                    await fileUploader.Upload(new DefaultFileUploader.Params(currentUserId, fileBytes, "filename"));
                 Notification.ShowInformation(response.Message);
             } catch (Exception exception) {
                 Notification.ShowError(exception.ToString());

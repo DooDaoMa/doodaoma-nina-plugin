@@ -25,7 +25,8 @@ namespace Doodaoma.NINA.Doodaoma.Uploader {
                     KeyImageFile, fileParams.Name
                 }
             };
-            HttpResponseMessage response = await httpClient.PostAsync("http://localhost:8080/api/images", form);
+            HttpResponseMessage response =
+                await httpClient.PostAsync("https://doodaoma-server-dev.up.railway.app/api/images", form);
             string responseMessage = await response.Content.ReadAsStringAsync();
             JObject responseMessageJson = JObject.Parse(responseMessage);
             UploadFileResponse uploadFileResponse = responseMessageJson.ToObject<UploadFileResponse>();

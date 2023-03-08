@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <Import Project="packages\EntityFramework.6.4.4\build\EntityFramework.props" Condition="Exists('packages\EntityFramework.6.4.4\build\EntityFramework.props')"/>
-    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')"/>
+    <Import Project="packages\EntityFramework.6.4.4\build\EntityFramework.props" Condition="Exists('packages\EntityFramework.6.4.4\build\EntityFramework.props')" />
+    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
     <PropertyGroup>
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
         <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -197,9 +197,9 @@
         <Reference Include="OxyPlot.Wpf.Shared, Version=2.1.2.0, Culture=neutral, PublicKeyToken=75e952ba404cdbb0, processorArchitecture=MSIL">
             <HintPath>packages\OxyPlot.Wpf.Shared.2.1.2\lib\net45\OxyPlot.Wpf.Shared.dll</HintPath>
         </Reference>
-        <Reference Include="PresentationCore"/>
-        <Reference Include="PresentationFramework"/>
-        <Reference Include="ReachFramework"/>
+        <Reference Include="PresentationCore" />
+        <Reference Include="PresentationFramework" />
+        <Reference Include="ReachFramework" />
         <Reference Include="SHA3, Version=0.9.2.0, Culture=neutral, processorArchitecture=MSIL">
             <HintPath>packages\SHA3.0.9.2\lib\net40\SHA3.dll</HintPath>
         </Reference>
@@ -209,7 +209,7 @@
         <Reference Include="SimpleThreadMonitor, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
             <HintPath>packages\SimpleThreadMonitor.1.0.2.1\lib\net45\SimpleThreadMonitor.dll</HintPath>
         </Reference>
-        <Reference Include="System"/>
+        <Reference Include="System" />
         <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
             <HintPath>packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
         </Reference>
@@ -219,10 +219,10 @@
         <Reference Include="System.ComponentModel.Annotations, Version=4.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
             <HintPath>packages\System.ComponentModel.Annotations.5.0.0\lib\net461\System.ComponentModel.Annotations.dll</HintPath>
         </Reference>
-        <Reference Include="System.ComponentModel.Composition"/>
-        <Reference Include="System.ComponentModel.DataAnnotations"/>
-        <Reference Include="System.Configuration"/>
-        <Reference Include="System.Core"/>
+        <Reference Include="System.ComponentModel.Composition" />
+        <Reference Include="System.ComponentModel.DataAnnotations" />
+        <Reference Include="System.Configuration" />
+        <Reference Include="System.Core" />
         <Reference Include="System.Data.SQLite, Version=1.0.117.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
             <HintPath>packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.117.0\lib\net46\System.Data.SQLite.dll</HintPath>
         </Reference>
@@ -235,12 +235,12 @@
         <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
             <HintPath>packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
         </Reference>
-        <Reference Include="System.Net"/>
-        <Reference Include="System.Numerics"/>
+        <Reference Include="System.Net" />
+        <Reference Include="System.Numerics" />
         <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
             <HintPath>packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
         </Reference>
-        <Reference Include="System.Printing"/>
+        <Reference Include="System.Printing" />
         <Reference Include="System.Reactive, Version=4.3.0.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
             <HintPath>packages\System.Reactive.4.3.2\lib\net46\System.Reactive.dll</HintPath>
         </Reference>
@@ -252,7 +252,7 @@
         <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
             <HintPath>packages\System.Runtime.CompilerServices.Unsafe.6.0.0\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
         </Reference>
-        <Reference Include="System.Runtime.Serialization"/>
+        <Reference Include="System.Runtime.Serialization" />
         <Reference Include="System.Text.Encodings.Web, Version=7.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
             <HintPath>packages\System.Text.Encodings.Web.7.0.0\lib\net462\System.Text.Encodings.Web.dll</HintPath>
         </Reference>
@@ -268,18 +268,18 @@
         <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
             <HintPath>packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
         </Reference>
-        <Reference Include="System.Windows"/>
-        <Reference Include="System.Windows.Forms"/>
+        <Reference Include="System.Windows" />
+        <Reference Include="System.Windows.Forms" />
         <Reference Include="System.Windows.Interactivity, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
             <HintPath>packages\System.Windows.Interactivity.WPF.2.0.20525\lib\net40\System.Windows.Interactivity.dll</HintPath>
         </Reference>
-        <Reference Include="System.Xaml"/>
-        <Reference Include="System.Xml.Linq"/>
-        <Reference Include="System.Data.DataSetExtensions"/>
-        <Reference Include="Microsoft.CSharp"/>
-        <Reference Include="System.Data"/>
-        <Reference Include="System.Net.Http"/>
-        <Reference Include="System.Xml"/>
+        <Reference Include="System.Xaml" />
+        <Reference Include="System.Xml.Linq" />
+        <Reference Include="System.Data.DataSetExtensions" />
+        <Reference Include="Microsoft.CSharp" />
+        <Reference Include="System.Data" />
+        <Reference Include="System.Net.Http" />
+        <Reference Include="System.Xml" />
         <Reference Include="ToggleSwitch, Version=1.2.0.0, Culture=neutral, processorArchitecture=MSIL">
             <HintPath>packages\ToggleSwitch.1.2.0\lib\net46\ToggleSwitch.dll</HintPath>
         </Reference>
@@ -289,36 +289,41 @@
         <Reference Include="Websocket.Client, Version=4.4.0.0, Culture=neutral, PublicKeyToken=ae648c6d12f59b1b, processorArchitecture=MSIL">
             <HintPath>packages\Websocket.Client.4.4.43\lib\netstandard2.0\Websocket.Client.dll</HintPath>
         </Reference>
-        <Reference Include="WindowsBase"/>
+        <Reference Include="WindowsBase" />
         <Reference Include="Zlib.Portable, Version=1.11.0.0, Culture=neutral, PublicKeyToken=431cba815f6a8b5b, processorArchitecture=MSIL">
             <HintPath>packages\Zlib.Portable.Signed.1.11.0\lib\portable-net4+sl5+wp8+win8+wpa81+MonoTouch+MonoAndroid\Zlib.Portable.dll</HintPath>
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="Factory\IFactory.cs"/>
-        <Compile Include="Uploader\DefaultFileUploader.cs"/>
-        <Compile Include="Uploader\IFileUploader.cs"/>
-        <Compile Include="Provider\CameraInfoProvider.cs"/>
-        <Compile Include="Doodaoma.cs"/>
-        <Compile Include="Provider\FakeCameraInfoProvider.cs"/>
+        <Compile Include="Factory\IFactory.cs" />
+        <Compile Include="Socket\Models\CapturePayload.cs" />
+        <Compile Include="Socket\Models\SetLimitPayload.cs" />
+        <Compile Include="Socket\Models\SetTargetNamePayload.cs" />
+        <Compile Include="Socket\Models\SetUserIdPayload.cs" />
+        <Compile Include="Socket\Models\SlewTelescopePayload.cs" />
+        <Compile Include="Uploader\DefaultFileUploader.cs" />
+        <Compile Include="Uploader\IFileUploader.cs" />
+        <Compile Include="Provider\CameraInfoProvider.cs" />
+        <Compile Include="Doodaoma.cs" />
+        <Compile Include="Provider\FakeCameraInfoProvider.cs" />
         <Compile Include="Options.xaml.cs">
             <DependentUpon>Options.xaml</DependentUpon>
         </Compile>
-        <Compile Include="Properties\AssemblyInfo.cs"/>
+        <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="Properties\Settings.Designer.cs">
             <AutoGen>True</AutoGen>
             <DesignTimeSharedInput>True</DesignTimeSharedInput>
             <DependentUpon>Settings.settings</DependentUpon>
         </Compile>
-        <Compile Include="Provider\ICameraInfoProvider.cs"/>
-        <Compile Include="Settings.cs"/>
-        <Compile Include="Socket\SocketClientFactory.cs"/>
-        <Compile Include="Socket\SocketHandler.cs"/>
-        <Compile Include="Uploader\Models\UploadFileResponse.cs"/>
+        <Compile Include="Provider\ICameraInfoProvider.cs" />
+        <Compile Include="Settings.cs" />
+        <Compile Include="Socket\SocketClientFactory.cs" />
+        <Compile Include="Socket\SocketHandler.cs" />
+        <Compile Include="Uploader\Models\UploadFileResponse.cs" />
     </ItemGroup>
     <ItemGroup>
-        <None Include="app.config"/>
-        <None Include="packages.config"/>
+        <None Include="app.config" />
+        <None Include="packages.config" />
         <None Include="Properties\Settings.settings">
             <Generator>SettingsSingleFileGenerator</Generator>
             <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -330,22 +335,22 @@
             <SubType>Designer</SubType>
         </Page>
     </ItemGroup>
-    <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
-    <Import Project="packages\Accord.3.8.0\build\Accord.targets" Condition="Exists('packages\Accord.3.8.0\build\Accord.targets')"/>
+    <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+    <Import Project="packages\Accord.3.8.0\build\Accord.targets" Condition="Exists('packages\Accord.3.8.0\build\Accord.targets')" />
     <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
         <PropertyGroup>
             <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them. For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
         </PropertyGroup>
-        <Error Condition="!Exists('packages\Accord.3.8.0\build\Accord.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Accord.3.8.0\build\Accord.targets'))"/>
-        <Error Condition="!Exists('packages\EntityFramework.6.4.4\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\EntityFramework.6.4.4\build\EntityFramework.props'))"/>
-        <Error Condition="!Exists('packages\EntityFramework.6.4.4\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\EntityFramework.6.4.4\build\EntityFramework.targets'))"/>
-        <Error Condition="!Exists('packages\VVVV.FreeImage.3.15.1.1\build\net40\VVVV.FreeImage.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\VVVV.FreeImage.3.15.1.1\build\net40\VVVV.FreeImage.targets'))"/>
-        <Error Condition="!Exists('packages\Google.Protobuf.Tools.3.21.12\build\Google.Protobuf.Tools.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Google.Protobuf.Tools.3.21.12\build\Google.Protobuf.Tools.targets'))"/>
-        <Error Condition="!Exists('packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.3\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.3\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets'))"/>
-        <Error Condition="!Exists('packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.117.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.117.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets'))"/>
+        <Error Condition="!Exists('packages\Accord.3.8.0\build\Accord.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Accord.3.8.0\build\Accord.targets'))" />
+        <Error Condition="!Exists('packages\EntityFramework.6.4.4\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\EntityFramework.6.4.4\build\EntityFramework.props'))" />
+        <Error Condition="!Exists('packages\EntityFramework.6.4.4\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\EntityFramework.6.4.4\build\EntityFramework.targets'))" />
+        <Error Condition="!Exists('packages\VVVV.FreeImage.3.15.1.1\build\net40\VVVV.FreeImage.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\VVVV.FreeImage.3.15.1.1\build\net40\VVVV.FreeImage.targets'))" />
+        <Error Condition="!Exists('packages\Google.Protobuf.Tools.3.21.12\build\Google.Protobuf.Tools.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Google.Protobuf.Tools.3.21.12\build\Google.Protobuf.Tools.targets'))" />
+        <Error Condition="!Exists('packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.3\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.3\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets'))" />
+        <Error Condition="!Exists('packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.117.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.117.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets'))" />
     </Target>
-    <Import Project="packages\EntityFramework.6.4.4\build\EntityFramework.targets" Condition="Exists('packages\EntityFramework.6.4.4\build\EntityFramework.targets')"/>
-    <Import Project="packages\VVVV.FreeImage.3.15.1.1\build\net40\VVVV.FreeImage.targets" Condition="Exists('packages\VVVV.FreeImage.3.15.1.1\build\net40\VVVV.FreeImage.targets')"/>
+    <Import Project="packages\EntityFramework.6.4.4\build\EntityFramework.targets" Condition="Exists('packages\EntityFramework.6.4.4\build\EntityFramework.targets')" />
+    <Import Project="packages\VVVV.FreeImage.3.15.1.1\build\net40\VVVV.FreeImage.targets" Condition="Exists('packages\VVVV.FreeImage.3.15.1.1\build\net40\VVVV.FreeImage.targets')" />
     <PropertyGroup>
         <PostBuildEvent>
             if not exist "%25localappdata%25\NINA\Plugins" (
@@ -361,7 +366,7 @@
             xcopy "$(TargetPath)" "%25localappdata%25\NINA\Plugins\$(TargetName)" /h/i/c/k/e/r/y
         </PostBuildEvent>
     </PropertyGroup>
-    <Import Project="packages\Google.Protobuf.Tools.3.21.12\build\Google.Protobuf.Tools.targets" Condition="Exists('packages\Google.Protobuf.Tools.3.21.12\build\Google.Protobuf.Tools.targets')"/>
-    <Import Project="packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.3\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets" Condition="Exists('packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.3\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets')"/>
-    <Import Project="packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.117.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets" Condition="Exists('packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.117.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')"/>
+    <Import Project="packages\Google.Protobuf.Tools.3.21.12\build\Google.Protobuf.Tools.targets" Condition="Exists('packages\Google.Protobuf.Tools.3.21.12\build\Google.Protobuf.Tools.targets')" />
+    <Import Project="packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.3\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets" Condition="Exists('packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.3\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets')" />
+    <Import Project="packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.117.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets" Condition="Exists('packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.117.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" />
 </Project>
