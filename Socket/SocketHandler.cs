@@ -73,13 +73,11 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                         IImageData imageData = await exposureData.ToImageData();
                         FileSaveInfo fileSaveInfo = new FileSaveInfo(profileService);
                         string savePath = await imageData.SaveToDisk(fileSaveInfo);
-                        Notification.ShowInformation("Saved to path " + savePath);
                         UploadFileEvent?.Invoke(this,
                             new UploadFileEventArgs { ImageData = imageData, Path = savePath });
                     } catch (Exception e) {
                         Notification.ShowError(e.ToString());
                     }
-
                     break;
                 }
                 case "cancelCapture": {

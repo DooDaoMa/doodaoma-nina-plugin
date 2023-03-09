@@ -39,15 +39,9 @@ namespace Doodaoma.NINA.Doodaoma.Uploader {
         }
 
         public struct Params {
-            public string UserId { get; }
-            public byte[] Content { get; }
-            public string Name { get; }
-
-            public Params(string userId, byte[] content, string name) {
-                UserId = userId;
-                Content = content;
-                Name = name;
-            }
+            public string UserId { get; set; }
+            public byte[] Content { get; set; }
+            public string Name { get; set; }
         }
     }
 }
