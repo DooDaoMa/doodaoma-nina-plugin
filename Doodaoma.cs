@@ -6,7 +6,6 @@ using Newtonsoft.Json.Linq;
 using NINA.Core.Utility;
 using NINA.Core.Utility.Notification;
 using NINA.Equipment.Interfaces.Mediator;
-using NINA.Equipment.Interfaces.ViewModel;
 using NINA.Plugin;
 using NINA.Plugin.Interfaces;
 using NINA.Profile.Interfaces;
@@ -28,12 +27,13 @@ namespace Doodaoma.NINA.Doodaoma {
     public class Doodaoma : PluginBase, INotifyPropertyChanged {
         private readonly IDeepSkyObjectSearchVM deepSkyObjectSearchVm;
         private readonly DefaultFileUploader fileUploader;
+        private readonly SocketHandler handler;
         private readonly WebsocketClient socketClient;
         private readonly HttpClient httpClient;
         private event EventHandler<bool> IsConnectedEvent;
         public event PropertyChangedEventHandler PropertyChanged;
         public IAsyncCommand ConnectToServerCommand { get; }
-        
+
         private string currentUserId;
 
         private string connectButtonText = "Connect";
@@ -60,7 +60,7 @@ namespace Doodaoma.NINA.Doodaoma {
         [ImportingConstructor]
         public Doodaoma(IDeepSkyObjectSearchVM deepSkyObjectSearchVm, IImagingMediator imagingMediator,
             ITelescopeMediator telescopeMediator, IImageSaveMediator imageSaveMediator,
-            IProfileService profileService, ICameraMediator cameraMediator, ICameraVM cameraVm) {
+            IProfileService profileService) {
             this.deepSkyObjectSearchVm = deepSkyObjectSearchVm;
 
             ICameraInfoProvider cameraInfoProvider = new FakeCameraInfoProvider();
@@ -70,8 +70,8 @@ namespace Doodaoma.NINA.Doodaoma {
 
             IsConnectedEvent += OnIsConnectedEvent;
 
-            SocketHandler handler = new SocketHandler(this.deepSkyObjectSearchVm, telescopeMediator,
-                imagingMediator, profileService, cameraMediator);
+            handler = new SocketHandler(this.deepSkyObjectSearchVm, telescopeMediator,
+                imagingMediator, profileService);
             handler.UserIdChangeEvent += OnUserIdChangeEvent;
             handler.UserDisconnectedEvent += HandlerOnUserDisconnectedEvent;
             handler.UploadFileEvent += HandlerOnUploadFileEvent;
@@ -124,6 +124,16 @@ namespace Doodaoma.NINA.Doodaoma {
             }
         }
 
+        private void OnIsConnectedEvent(object sender, bool e) {
+            IsConnected = e;
+            if (e) {
+                Notification.ShowInformation("Connected");
+                deepSkyObjectSearchVm.TargetSearchResult.PropertyChanged += TargetSearchResultOnPropertyChanged;
+            } else {
+                Notification.ShowInformation("Not connected");
+            }
+        }
+
         private async Task<bool> ConnectToServer() {
             try {
                 await socketClient.StartOrFail();
@@ -138,19 +148,10 @@ namespace Doodaoma.NINA.Doodaoma {
 
         public override Task Teardown() {
             deepSkyObjectSearchVm.TargetSearchResult.PropertyChanged -= TargetSearchResultOnPropertyChanged;
+            handler.DisposeCaptureCancelTokenSource();
             socketClient.Dispose();
             httpClient.Dispose();
             return base.Teardown();
-        }
-
-        private void OnIsConnectedEvent(object sender, bool e) {
-            IsConnected = e;
-            if (e) {
-                Notification.ShowInformation("Connected");
-                deepSkyObjectSearchVm.TargetSearchResult.PropertyChanged += TargetSearchResultOnPropertyChanged;
-            } else {
-                Notification.ShowInformation("Not connected");
-            }
         }
 
         private void TargetSearchResultOnPropertyChanged(object sender, PropertyChangedEventArgs e) {

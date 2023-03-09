@@ -21,20 +21,18 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
         private readonly ITelescopeMediator telescopeMediator;
         private readonly IImagingMediator imagingMediator;
         private readonly IProfileService profileService;
-        private readonly ICameraMediator cameraMediator;
+        private CancellationTokenSource captureCancelTokenSource;
 
         public event EventHandler<string> UserIdChangeEvent;
         public event EventHandler UserDisconnectedEvent;
         public event EventHandler<UploadFileEventArgs> UploadFileEvent;
 
         public SocketHandler(IDeepSkyObjectSearchVM deepSkyObjectSearchVm,
-            ITelescopeMediator telescopeMediator, IImagingMediator imagingMediator, IProfileService profileService,
-            ICameraMediator cameraMediator) {
+            ITelescopeMediator telescopeMediator, IImagingMediator imagingMediator, IProfileService profileService) {
             this.deepSkyObjectSearchVm = deepSkyObjectSearchVm;
             this.telescopeMediator = telescopeMediator;
             this.imagingMediator = imagingMediator;
             this.profileService = profileService;
-            this.cameraMediator = cameraMediator;
         }
 
         public async void HandleMessage(string message) {
@@ -66,33 +64,47 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                     break;
                 }
                 case "capture": {
+                    if (captureCancelTokenSource != null) {
+                        return;
+                    }
                     CapturePayload payload = parsedMessage["payload"]?.ToObject<CapturePayload>();
                     CaptureSequence captureSequence = new CaptureSequence {
                         ExposureTime = payload?.ExposureTime ?? 1.0
                     };
+                    captureCancelTokenSource = new CancellationTokenSource();
                     try {
-                        cameraMediator.RegisterCaptureBlock(this);
-                        await cameraMediator.Capture(captureSequence, CancellationToken.None, null);
                         IExposureData exposureData =
-                            await imagingMediator.CaptureImage(captureSequence, CancellationToken.None, null);
+                            await imagingMediator.CaptureImage(captureSequence, captureCancelTokenSource.Token, null);
                         IImageData imageData = await exposureData.ToImageData();
                         FileSaveInfo fileSaveInfo = new FileSaveInfo(profileService);
                         string savePath = await imageData.SaveToDisk(fileSaveInfo);
                         UploadFileEvent?.Invoke(this,
                             new UploadFileEventArgs { ImageData = imageData, Path = savePath });
                     } catch (Exception e) {
-                        Notification.ShowError(e.ToString());
-                    } finally {
-                        cameraMediator.ReleaseCaptureBlock(this);
+                        if (e is OperationCanceledException) {
+                            Notification.ShowInformation("Cancel capturing");
+                        } else {
+                            Notification.ShowError(e.ToString());
+                        }
                     }
 
                     break;
                 }
                 case "cancelCapture": {
-                    Notification.ShowInformation(cameraMediator.IsFreeToCapture(this).ToString());
+                    if (captureCancelTokenSource == null) {
+                        return;
+                    }
+
+                    DisposeCaptureCancelTokenSource();
                     break;
                 }
             }
+        }
+
+        public void DisposeCaptureCancelTokenSource() {
+            captureCancelTokenSource.Cancel();
+            captureCancelTokenSource.Dispose();
+            captureCancelTokenSource = null;
         }
     }
 }
