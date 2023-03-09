@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 using NINA.Core.Utility;
 using NINA.Core.Utility.Notification;
 using NINA.Equipment.Interfaces.Mediator;
-using NINA.Image.Interfaces;
+using NINA.Equipment.Interfaces.ViewModel;
 using NINA.Plugin;
 using NINA.Plugin.Interfaces;
 using NINA.Profile.Interfaces;
@@ -27,15 +27,14 @@ namespace Doodaoma.NINA.Doodaoma {
     [Export(typeof(IPluginManifest))]
     public class Doodaoma : PluginBase, INotifyPropertyChanged {
         private readonly IDeepSkyObjectSearchVM deepSkyObjectSearchVm;
-        private readonly IImageDataFactory imageDataFactory;
         private readonly DefaultFileUploader fileUploader;
         private readonly WebsocketClient socketClient;
         private readonly HttpClient httpClient;
         private event EventHandler<bool> IsConnectedEvent;
-        private string currentUserId;
-
         public event PropertyChangedEventHandler PropertyChanged;
         public IAsyncCommand ConnectToServerCommand { get; }
+        
+        private string currentUserId;
 
         private string connectButtonText = "Connect";
 
@@ -61,9 +60,8 @@ namespace Doodaoma.NINA.Doodaoma {
         [ImportingConstructor]
         public Doodaoma(IDeepSkyObjectSearchVM deepSkyObjectSearchVm, IImagingMediator imagingMediator,
             ITelescopeMediator telescopeMediator, IImageSaveMediator imageSaveMediator,
-            IProfileService profileService, IImageDataFactory imageDataFactory) {
+            IProfileService profileService, ICameraMediator cameraMediator, ICameraVM cameraVm) {
             this.deepSkyObjectSearchVm = deepSkyObjectSearchVm;
-            this.imageDataFactory = imageDataFactory;
 
             ICameraInfoProvider cameraInfoProvider = new FakeCameraInfoProvider();
             socketClient = new SocketClientFactory(cameraInfoProvider).Create();
@@ -73,7 +71,7 @@ namespace Doodaoma.NINA.Doodaoma {
             IsConnectedEvent += OnIsConnectedEvent;
 
             SocketHandler handler = new SocketHandler(this.deepSkyObjectSearchVm, telescopeMediator,
-                imagingMediator, profileService);
+                imagingMediator, profileService, cameraMediator);
             handler.UserIdChangeEvent += OnUserIdChangeEvent;
             handler.UserDisconnectedEvent += HandlerOnUserDisconnectedEvent;
             handler.UploadFileEvent += HandlerOnUploadFileEvent;

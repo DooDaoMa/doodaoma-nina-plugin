@@ -21,17 +21,20 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
         private readonly ITelescopeMediator telescopeMediator;
         private readonly IImagingMediator imagingMediator;
         private readonly IProfileService profileService;
+        private readonly ICameraMediator cameraMediator;
 
         public event EventHandler<string> UserIdChangeEvent;
         public event EventHandler UserDisconnectedEvent;
         public event EventHandler<UploadFileEventArgs> UploadFileEvent;
 
         public SocketHandler(IDeepSkyObjectSearchVM deepSkyObjectSearchVm,
-            ITelescopeMediator telescopeMediator, IImagingMediator imagingMediator, IProfileService profileService) {
+            ITelescopeMediator telescopeMediator, IImagingMediator imagingMediator, IProfileService profileService,
+            ICameraMediator cameraMediator) {
             this.deepSkyObjectSearchVm = deepSkyObjectSearchVm;
             this.telescopeMediator = telescopeMediator;
             this.imagingMediator = imagingMediator;
             this.profileService = profileService;
+            this.cameraMediator = cameraMediator;
         }
 
         public async void HandleMessage(string message) {
@@ -68,6 +71,8 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                         ExposureTime = payload?.ExposureTime ?? 1.0
                     };
                     try {
+                        cameraMediator.RegisterCaptureBlock(this);
+                        await cameraMediator.Capture(captureSequence, CancellationToken.None, null);
                         IExposureData exposureData =
                             await imagingMediator.CaptureImage(captureSequence, CancellationToken.None, null);
                         IImageData imageData = await exposureData.ToImageData();
@@ -77,10 +82,14 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                             new UploadFileEventArgs { ImageData = imageData, Path = savePath });
                     } catch (Exception e) {
                         Notification.ShowError(e.ToString());
+                    } finally {
+                        cameraMediator.ReleaseCaptureBlock(this);
                     }
+
                     break;
                 }
                 case "cancelCapture": {
+                    Notification.ShowInformation(cameraMediator.IsFreeToCapture(this).ToString());
                     break;
                 }
             }
