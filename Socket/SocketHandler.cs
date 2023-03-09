@@ -8,7 +8,6 @@ using NINA.Image.Interfaces;
 using NINA.Profile.Interfaces;
 using NINA.WPF.Base.Interfaces.ViewModel;
 using System;
-using System.IO;
 using System.Threading;
 
 namespace Doodaoma.NINA.Doodaoma.Socket {
