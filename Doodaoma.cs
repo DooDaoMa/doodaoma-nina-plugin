@@ -75,11 +75,19 @@ namespace Doodaoma.NINA.Doodaoma {
             handler.UserIdChangeEvent += OnUserIdChangeEvent;
             handler.UserDisconnectedEvent += HandlerOnUserDisconnectedEvent;
             handler.UploadFileEvent += HandlerOnUploadFileEvent;
+            handler.CapturingEvent += HandlerOnCapturingEvent;
             socketClient.MessageReceived
                 .Where(msg => msg.Text != null)
                 .Where(msg => msg.Text.StartsWith("{") && msg.Text.EndsWith("}"))
                 .Subscribe(msg => handler.HandleMessage(msg.Text));
             ConnectToServerCommand = new AsyncCommand<bool>(ConnectToServer);
+        }
+
+        private void HandlerOnCapturingEvent(object sender, EventArgs e) {
+            JObject message = JObject.FromObject(new {
+                type = "sendMessage", payload = new { message = "Camera is busy" }
+            });
+            socketClient.Send(message.ToString());
         }
 
         private void OnUserIdChangeEvent(object sender, string userId) {
@@ -148,7 +156,7 @@ namespace Doodaoma.NINA.Doodaoma {
 
         public override Task Teardown() {
             deepSkyObjectSearchVm.TargetSearchResult.PropertyChanged -= TargetSearchResultOnPropertyChanged;
-            handler.DisposeCaptureCancelTokenSource();
+            handler.ClearCaptureCancelTokenSource();
             socketClient.Dispose();
             httpClient.Dispose();
             return base.Teardown();
