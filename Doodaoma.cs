@@ -26,6 +26,8 @@ namespace Doodaoma.NINA.Doodaoma {
     [Export(typeof(IPluginManifest))]
     public class Doodaoma : PluginBase, INotifyPropertyChanged {
         private readonly IDeepSkyObjectSearchVM deepSkyObjectSearchVm;
+        private readonly ICameraMediator cameraMediator;
+        private readonly IImageSaveMediator imageSaveMediator;
         private readonly DefaultFileUploader fileUploader;
         private readonly SocketHandler handler;
         private readonly WebsocketClient socketClient;
@@ -60,8 +62,12 @@ namespace Doodaoma.NINA.Doodaoma {
         [ImportingConstructor]
         public Doodaoma(IDeepSkyObjectSearchVM deepSkyObjectSearchVm, IImagingMediator imagingMediator,
             ITelescopeMediator telescopeMediator, IImageSaveMediator imageSaveMediator,
-            IProfileService profileService) {
+            IProfileService profileService, ICameraMediator cameraMediator, IImageHistoryVM imageHistoryVm) {
             this.deepSkyObjectSearchVm = deepSkyObjectSearchVm;
+            this.imageSaveMediator = imageSaveMediator;
+            this.imageSaveMediator.ImageSaved += (sender, args) => {
+                Notification.ShowInformation("Image saved");
+            };
 
             ICameraInfoProvider cameraInfoProvider = new FakeCameraInfoProvider();
             socketClient = new SocketClientFactory(cameraInfoProvider).Create();
@@ -71,7 +77,7 @@ namespace Doodaoma.NINA.Doodaoma {
             IsConnectedEvent += OnIsConnectedEvent;
 
             handler = new SocketHandler(this.deepSkyObjectSearchVm, telescopeMediator,
-                imagingMediator, profileService);
+                imagingMediator, profileService, cameraMediator, imageSaveMediator, imageHistoryVm);
             handler.UserIdChangeEvent += OnUserIdChangeEvent;
             handler.UserDisconnectedEvent += HandlerOnUserDisconnectedEvent;
             handler.UploadFileEvent += HandlerOnUploadFileEvent;
