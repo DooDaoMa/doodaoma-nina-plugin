@@ -1,17 +1,25 @@
-﻿using Doodaoma.NINA.Doodaoma.Provider;
+﻿using Doodaoma.NINA.Doodaoma.Manager;
+using Doodaoma.NINA.Doodaoma.Provider;
 using Doodaoma.NINA.Doodaoma.Socket;
 using Doodaoma.NINA.Doodaoma.Uploader;
 using Doodaoma.NINA.Doodaoma.Uploader.Models;
 using Newtonsoft.Json.Linq;
+using NINA.Astrometry.Interfaces;
 using NINA.Core.Utility;
 using NINA.Core.Utility.Notification;
+using NINA.Core.Utility.WindowService;
+using NINA.Equipment.Interfaces;
 using NINA.Equipment.Interfaces.Mediator;
+using NINA.PlateSolving.Interfaces;
 using NINA.Plugin;
 using NINA.Plugin.Interfaces;
 using NINA.Profile.Interfaces;
+using NINA.Sequencer.Utility.DateTimeProvider;
+using NINA.WPF.Base.Interfaces;
 using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.ViewModel;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.IO;
@@ -25,8 +33,6 @@ using Websocket.Client;
 namespace Doodaoma.NINA.Doodaoma {
     [Export(typeof(IPluginManifest))]
     public class Doodaoma : PluginBase, INotifyPropertyChanged {
-        private readonly IDeepSkyObjectSearchVM deepSkyObjectSearchVm;
-        private readonly ICameraMediator cameraMediator;
         private readonly IImageSaveMediator imageSaveMediator;
         private readonly DefaultFileUploader fileUploader;
         private readonly SocketHandler handler;
@@ -60,33 +66,69 @@ namespace Doodaoma.NINA.Doodaoma {
         }
 
         [ImportingConstructor]
-        public Doodaoma(IDeepSkyObjectSearchVM deepSkyObjectSearchVm, IImagingMediator imagingMediator,
-            ITelescopeMediator telescopeMediator, IImageSaveMediator imageSaveMediator,
-            IProfileService profileService, ICameraMediator cameraMediator, IImageHistoryVM imageHistoryVm) {
-            this.deepSkyObjectSearchVm = deepSkyObjectSearchVm;
+        public Doodaoma(IList<IDateTimeProvider> dateTimeProviders, ITelescopeMediator telescopeMediator,
+            ICameraMediator cameraMediator, IProfileService profileService, IFilterWheelMediator filterWheelMediator,
+            IGuiderMediator guiderMediator, IImageHistoryVM imageHistoryVm, IFocuserMediator focuserMediator,
+            IAutoFocusVMFactory autoFocusVmFactory, IRotatorMediator rotatorMediator, IImagingMediator imagingMediator,
+            IPlateSolverFactory plateSolverFactory, IWindowServiceFactory windowServiceFactory,
+            INighttimeCalculator nighttimeCalculator, IFramingAssistantVM framingAssistantVm,
+            IApplicationMediator applicationMediator, IPlanetariumFactory planetariumFactory,
+            IImageSaveMediator imageSaveMediator, IMeridianFlipVMFactory meridianFlipVmFactory,
+            IApplicationStatusMediator applicationStatusMediator, IDomeMediator domeMediator,
+            IDomeFollower domeFollower) {
             this.imageSaveMediator = imageSaveMediator;
-            this.imageSaveMediator.ImageSaved += (sender, args) => {
-                Notification.ShowInformation("Image saved");
-            };
+            this.imageSaveMediator.ImageSaved += ImageSaveMediatorOnImageSaved;
 
             ICameraInfoProvider cameraInfoProvider = new FakeCameraInfoProvider();
             socketClient = new SocketClientFactory(cameraInfoProvider).Create();
             httpClient = new HttpClient();
             fileUploader = new DefaultFileUploader(httpClient);
+            SequenceManager sequenceManager = new SequenceManager(dateTimeProviders, telescopeMediator, cameraMediator,
+                profileService, filterWheelMediator, guiderMediator, imageHistoryVm, focuserMediator,
+                autoFocusVmFactory, rotatorMediator, imagingMediator, plateSolverFactory, windowServiceFactory,
+                nighttimeCalculator, framingAssistantVm, applicationMediator, planetariumFactory,
+                meridianFlipVmFactory, applicationStatusMediator, domeMediator, domeFollower, this.imageSaveMediator);
 
             IsConnectedEvent += OnIsConnectedEvent;
 
-            handler = new SocketHandler(this.deepSkyObjectSearchVm, telescopeMediator,
-                imagingMediator, profileService, cameraMediator, imageSaveMediator, imageHistoryVm);
+            handler = new SocketHandler(sequenceManager);
             handler.UserIdChangeEvent += OnUserIdChangeEvent;
             handler.UserDisconnectedEvent += HandlerOnUserDisconnectedEvent;
-            handler.UploadFileEvent += HandlerOnUploadFileEvent;
-            handler.CapturingEvent += HandlerOnCapturingEvent;
             socketClient.MessageReceived
                 .Where(msg => msg.Text != null)
                 .Where(msg => msg.Text.StartsWith("{") && msg.Text.EndsWith("}"))
                 .Subscribe(msg => handler.HandleMessage(msg.Text));
             ConnectToServerCommand = new AsyncCommand<bool>(ConnectToServer);
+        }
+
+        private async void ImageSaveMediatorOnImageSaved(object sender, ImageSavedEventArgs e) {
+            if (!isConnected) {
+                return;
+            }
+
+            if (currentUserId == null) {
+                return;
+            }
+
+            try {
+                byte[] fileBytes;
+
+                BitmapEncoder encoder = new PngBitmapEncoder();
+                using (MemoryStream stream = new MemoryStream()) {
+                    encoder.Frames.Add(BitmapFrame.Create(e.Image));
+                    encoder.Save(stream);
+                    fileBytes = stream.ToArray();
+                }
+
+                UploadFileResponse response = await fileUploader.Upload(
+                    new DefaultFileUploader.Params {
+                        UserId = currentUserId, Content = fileBytes, Name = Path.GetFileName(e.PathToImage.AbsolutePath)
+                    }
+                );
+                Notification.ShowInformation(response.Message);
+            } catch (Exception exception) {
+                Notification.ShowError(exception.ToString());
+            }
         }
 
         private void HandlerOnCapturingEvent(object sender, EventArgs e) {
@@ -106,46 +148,9 @@ namespace Doodaoma.NINA.Doodaoma {
             Notification.ShowInformation("User disconnected");
         }
 
-        private async void HandlerOnUploadFileEvent(object sender, UploadFileEventArgs e) {
-            if (!isConnected) {
-                Notification.ShowError("Not connected to server");
-                return;
-            }
-
-            if (currentUserId == null) {
-                Notification.ShowError("Null user id");
-                return;
-            }
-
-            try {
-                byte[] fileBytes;
-
-                BitmapEncoder encoder = new PngBitmapEncoder();
-                using (MemoryStream stream = new MemoryStream()) {
-                    encoder.Frames.Add(BitmapFrame.Create(e.ImageData.RenderBitmapSource()));
-                    encoder.Save(stream);
-                    fileBytes = stream.ToArray();
-                }
-
-                UploadFileResponse response = await fileUploader.Upload(
-                    new DefaultFileUploader.Params {
-                        UserId = currentUserId, Content = fileBytes, Name = Path.GetFileName(e.Path)
-                    }
-                );
-                Notification.ShowInformation(response.Message);
-            } catch (Exception exception) {
-                Notification.ShowError(exception.ToString());
-            }
-        }
-
         private void OnIsConnectedEvent(object sender, bool e) {
             IsConnected = e;
-            if (e) {
-                Notification.ShowInformation("Connected");
-                deepSkyObjectSearchVm.TargetSearchResult.PropertyChanged += TargetSearchResultOnPropertyChanged;
-            } else {
-                Notification.ShowInformation("Not connected");
-            }
+            Notification.ShowInformation(e ? "Connected" : "Not connected");
         }
 
         private async Task<bool> ConnectToServer() {
@@ -161,19 +166,11 @@ namespace Doodaoma.NINA.Doodaoma {
         }
 
         public override Task Teardown() {
-            deepSkyObjectSearchVm.TargetSearchResult.PropertyChanged -= TargetSearchResultOnPropertyChanged;
+            imageSaveMediator.ImageSaved -= ImageSaveMediatorOnImageSaved;
             handler.ClearCaptureCancelTokenSource();
             socketClient.Dispose();
             httpClient.Dispose();
             return base.Teardown();
-        }
-
-        private void TargetSearchResultOnPropertyChanged(object sender, PropertyChangedEventArgs e) {
-            Notification.ShowInformation(e.PropertyName);
-            JObject deepSkyObjectsMessage = JObject.FromObject(new {
-                type = "deepSkyObjects", payload = new { results = deepSkyObjectSearchVm.TargetSearchResult.Result }
-            });
-            socketClient.Send(deepSkyObjectsMessage.ToString());
         }
 
         private void RaisePropertyChanged([CallerMemberName] string propertyName = null) {
