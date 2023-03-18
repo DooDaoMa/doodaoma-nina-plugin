@@ -1,7 +1,6 @@
 ﻿using Doodaoma.NINA.Doodaoma.Manager;
 using Doodaoma.NINA.Doodaoma.Socket.Models;
 using Newtonsoft.Json.Linq;
-using NINA.Astrometry;
 using NINA.Core.Utility.Notification;
 using System;
 using System.Threading;
@@ -13,6 +12,8 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
 
         public event EventHandler<string> UserIdChangeEvent;
         public event EventHandler UserDisconnectedEvent;
+        public event EventHandler CapturingEvent;
+        public event EventHandler GetFilterWheelOptionsEvent; 
 
         public SocketHandler(SequenceManager sequenceManager) {
             this.sequenceManager = sequenceManager;
@@ -33,10 +34,14 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                     UserDisconnectedEvent?.Invoke(this, EventArgs.Empty);
                     break;
                 }
+                case "getFilterWheelOptions": {
+                    GetFilterWheelOptionsEvent?.Invoke(this, EventArgs.Empty);
+                    break;
+                }
                 case "runStartSequence": {
                     try {
                         await sequenceManager.RunStartSequence(CancellationToken.None);
-                    } catch (Exception e) {
+                    } catch (Exception e) { 
                         Notification.ShowError(e.ToString());
                     }
 

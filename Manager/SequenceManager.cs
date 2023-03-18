@@ -135,7 +135,7 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
                 focuserMediator, applicationStatusMediator, meridianFlipVmFactory));
             targetMainContainer.Add(new CenterAfterDriftTrigger(profileService, telescopeMediator, filterWheelMediator,
                 guiderMediator, imagingMediator, cameraMediator, domeMediator, domeFollower, imageSaveMediator,
-                applicationStatusMediator));
+                applicationStatusMediator) { AfterExposures = 1, DistanceArcMinutes = 3 }); // require config
             targetMainContainer.Add(new RestoreGuiding(guiderMediator));
 
             SequentialContainer targetEquipmentCheckContainer = new SequentialContainer();
@@ -151,7 +151,7 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
             targetPrepareContainer.Add(new SwitchFilter(profileService, filterWheelMediator) { }); // require config
             targetPrepareContainer.Add(new Center(profileService, telescopeMediator, imagingMediator,
                 filterWheelMediator, guiderMediator, domeMediator, domeFollower, plateSolverFactory,
-                windowServiceFactory) { Inherited = true });
+                windowServiceFactory));
             targetPrepareContainer.Add(new StartGuiding(guiderMediator) { ForceCalibration = false }); // require config
             targetPrepareContainer.Add(new RunAutofocus(profileService, imageHistoryVm, cameraMediator,
                 filterWheelMediator, focuserMediator, autoFocusVmFactory));
@@ -162,7 +162,7 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
                 Amount = 10, SampleSize = 5
             }); // require config
             imagingContainer.Add(new TimeCondition(dateTimeProviders)); // require config
-            imagingContainer.Add(new AboveHorizonCondition(profileService)); // require config
+            imagingContainer.Add(new AboveHorizonCondition(profileService));
             imagingContainer.Add(new SmartExposure(
                 null,
                 new SwitchFilter(profileService, filterWheelMediator),
@@ -171,12 +171,12 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
                 },
                 new LoopCondition { Iterations = 3 },
                 new DitherAfterExposures(guiderMediator, imageHistoryVm, profileService) { AfterExposures = 0 }
-            ));
+            )); // require config
             imagingContainer.Add(new Dither(guiderMediator, profileService));
 
             targetMainContainer.Add(targetEquipmentCheckContainer);
             targetMainContainer.Add(new WaitForTime(dateTimeProviders)); // require config
-            targetMainContainer.Add(new WaitUntilAboveHorizon(profileService)); // require config
+            targetMainContainer.Add(new WaitUntilAboveHorizon(profileService));
             targetMainContainer.Add(targetPrepareContainer);
             targetMainContainer.Add(imagingContainer);
             targetMainContainer.Add(new StopGuiding(guiderMediator));

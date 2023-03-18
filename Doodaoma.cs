@@ -10,6 +10,7 @@ using NINA.Core.Utility.Notification;
 using NINA.Core.Utility.WindowService;
 using NINA.Equipment.Interfaces;
 using NINA.Equipment.Interfaces.Mediator;
+using NINA.Equipment.Interfaces.ViewModel;
 using NINA.PlateSolving.Interfaces;
 using NINA.Plugin;
 using NINA.Plugin.Interfaces;
@@ -20,9 +21,11 @@ using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.ViewModel;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
@@ -34,6 +37,7 @@ namespace Doodaoma.NINA.Doodaoma {
     [Export(typeof(IPluginManifest))]
     public class Doodaoma : PluginBase, INotifyPropertyChanged {
         private readonly IImageSaveMediator imageSaveMediator;
+        private readonly IProfileService profileService;
         private readonly DefaultFileUploader fileUploader;
         private readonly SocketHandler handler;
         private readonly WebsocketClient socketClient;
@@ -78,6 +82,9 @@ namespace Doodaoma.NINA.Doodaoma {
             IDomeFollower domeFollower) {
             this.imageSaveMediator = imageSaveMediator;
             this.imageSaveMediator.ImageSaved += ImageSaveMediatorOnImageSaved;
+            this.profileService = profileService;
+            this.profileService.ActiveProfile.FilterWheelSettings.FilterWheelFilters.CollectionChanged +=
+                HandlerOnGetFilterWheelOptionsEvent;
 
             ICameraInfoProvider cameraInfoProvider = new FakeCameraInfoProvider();
             socketClient = new SocketClientFactory(cameraInfoProvider).Create();
@@ -87,18 +94,50 @@ namespace Doodaoma.NINA.Doodaoma {
                 profileService, filterWheelMediator, guiderMediator, imageHistoryVm, focuserMediator,
                 autoFocusVmFactory, rotatorMediator, imagingMediator, plateSolverFactory, windowServiceFactory,
                 nighttimeCalculator, framingAssistantVm, applicationMediator, planetariumFactory,
-                meridianFlipVmFactory, applicationStatusMediator, domeMediator, domeFollower, this.imageSaveMediator);
+                meridianFlipVmFactory, applicationStatusMediator, domeMediator, domeFollower, imageSaveMediator);
 
             IsConnectedEvent += OnIsConnectedEvent;
 
             handler = new SocketHandler(sequenceManager);
-            handler.UserIdChangeEvent += OnUserIdChangeEvent;
+            handler.UserIdChangeEvent += HandlerOnUserIdChangeEvent;
             handler.UserDisconnectedEvent += HandlerOnUserDisconnectedEvent;
+            handler.CapturingEvent += HandlerOnCapturingEvent;
+            handler.GetFilterWheelOptionsEvent += HandlerOnGetFilterWheelOptionsEvent;
             socketClient.MessageReceived
                 .Where(msg => msg.Text != null)
                 .Where(msg => msg.Text.StartsWith("{") && msg.Text.EndsWith("}"))
                 .Subscribe(msg => handler.HandleMessage(msg.Text));
             ConnectToServerCommand = new AsyncCommand<bool>(ConnectToServer);
+        }
+
+        private async Task<bool> ConnectToServer() {
+            try {
+                await socketClient.StartOrFail();
+                return true;
+            } catch (Exception e) {
+                Notification.ShowError(e.ToString());
+                return false;
+            } finally {
+                IsConnectedEvent?.Invoke(this, socketClient.IsRunning);
+            }
+        }
+
+        public override Task Teardown() {
+            imageSaveMediator.ImageSaved -= ImageSaveMediatorOnImageSaved;
+            profileService.ActiveProfile.FilterWheelSettings.FilterWheelFilters.CollectionChanged -=
+                HandlerOnGetFilterWheelOptionsEvent;
+            handler.UserIdChangeEvent -= HandlerOnUserIdChangeEvent;
+            handler.UserDisconnectedEvent -= HandlerOnUserDisconnectedEvent;
+            handler.CapturingEvent -= HandlerOnCapturingEvent;
+            handler.ClearCaptureCancelTokenSource();
+            socketClient.Dispose();
+            httpClient.Dispose();
+            return base.Teardown();
+        }
+
+        private void OnIsConnectedEvent(object sender, bool e) {
+            IsConnected = e;
+            Notification.ShowInformation(e ? "Connected" : "Not connected");
         }
 
         private async void ImageSaveMediatorOnImageSaved(object sender, ImageSavedEventArgs e) {
@@ -131,6 +170,24 @@ namespace Doodaoma.NINA.Doodaoma {
             }
         }
 
+        private void HandlerOnGetFilterWheelOptionsEvent(object sender, EventArgs e) {
+            if (e is NotifyCollectionChangedEventArgs) {
+                JObject filterWheels = JObject.FromObject(new {
+                    type = "updateFilterWheelOptions",
+                    payload = new { options = ((NotifyCollectionChangedEventArgs)e).NewItems }
+                });
+                socketClient.Send(filterWheels.ToString());
+            } else {
+                JObject filterWheels = JObject.FromObject(new {
+                    type = "updateFilterWheelOptions",
+                    payload = new {
+                        options = profileService.ActiveProfile.FilterWheelSettings.FilterWheelFilters.ToList()
+                    }
+                });
+                socketClient.Send(filterWheels.ToString());
+            }
+        }
+
         private void HandlerOnCapturingEvent(object sender, EventArgs e) {
             JObject message = JObject.FromObject(new {
                 type = "sendMessage", payload = new { message = "Camera is busy" }
@@ -138,7 +195,7 @@ namespace Doodaoma.NINA.Doodaoma {
             socketClient.Send(message.ToString());
         }
 
-        private void OnUserIdChangeEvent(object sender, string userId) {
+        private void HandlerOnUserIdChangeEvent(object sender, string userId) {
             currentUserId = userId;
             Notification.ShowInformation("Current user " + currentUserId);
         }
@@ -146,31 +203,6 @@ namespace Doodaoma.NINA.Doodaoma {
         private void HandlerOnUserDisconnectedEvent(object sender, EventArgs e) {
             currentUserId = null;
             Notification.ShowInformation("User disconnected");
-        }
-
-        private void OnIsConnectedEvent(object sender, bool e) {
-            IsConnected = e;
-            Notification.ShowInformation(e ? "Connected" : "Not connected");
-        }
-
-        private async Task<bool> ConnectToServer() {
-            try {
-                await socketClient.StartOrFail();
-                return true;
-            } catch (Exception e) {
-                Notification.ShowError(e.ToString());
-                return false;
-            } finally {
-                IsConnectedEvent?.Invoke(this, socketClient.IsRunning);
-            }
-        }
-
-        public override Task Teardown() {
-            imageSaveMediator.ImageSaved -= ImageSaveMediatorOnImageSaved;
-            handler.ClearCaptureCancelTokenSource();
-            socketClient.Dispose();
-            httpClient.Dispose();
-            return base.Teardown();
         }
 
         private void RaisePropertyChanged([CallerMemberName] string propertyName = null) {
