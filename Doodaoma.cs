@@ -171,10 +171,10 @@ namespace Doodaoma.NINA.Doodaoma {
         }
 
         private void HandlerOnGetFilterWheelOptionsEvent(object sender, EventArgs e) {
-            if (e is NotifyCollectionChangedEventArgs) {
+            if (e is NotifyCollectionChangedEventArgs args) {
                 JObject filterWheels = JObject.FromObject(new {
                     type = "updateFilterWheelOptions",
-                    payload = new { options = ((NotifyCollectionChangedEventArgs)e).NewItems }
+                    payload = new { options = args.NewItems }
                 });
                 socketClient.Send(filterWheels.ToString());
             } else {

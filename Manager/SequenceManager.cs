@@ -1,6 +1,7 @@
-﻿using NINA.Astrometry;
+﻿using   NINA.Astrometry;
 using NINA.Astrometry.Interfaces;
 using NINA.Core.Model;
+using NINA.Core.Model.Equipment;
 using NINA.Core.Utility.Notification;
 using NINA.Core.Utility.WindowService;
 using NINA.Equipment.Interfaces;
@@ -16,17 +17,15 @@ using NINA.Sequencer.SequenceItem.Guider;
 using NINA.Sequencer.SequenceItem.Imaging;
 using NINA.Sequencer.SequenceItem.Platesolving;
 using NINA.Sequencer.SequenceItem.Telescope;
-using NINA.Sequencer.SequenceItem.Utility;
-using NINA.Sequencer.Trigger.Autofocus;
 using NINA.Sequencer.Trigger.Guider;
 using NINA.Sequencer.Trigger.MeridianFlip;
-using NINA.Sequencer.Trigger.Platesolving;
 using NINA.Sequencer.Utility.DateTimeProvider;
 using NINA.WPF.Base.Interfaces;
 using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.ViewModel;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -88,106 +87,88 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
             this.imageSaveMediator = imageSaveMediator;
         }
 
-        public Task RunStartSequence(CancellationToken cancellationToken) {
+        public Task RunStartSequence(StartSequenceParams sequenceParams, CancellationToken cancellationToken) {
             SequentialContainer startMainContainer = new SequentialContainer();
 
             SequentialContainer startEquipmentCheckContainer = new SequentialContainer();
-            startEquipmentCheckContainer.Add(new WaitForTime(dateTimeProviders)); // config params
             startEquipmentCheckContainer.Add(new UnparkScope(telescopeMediator));
-            startEquipmentCheckContainer.Add(
-                new SetTracking(telescopeMediator) { TrackingMode = TrackingMode.Sidereal }); // config params
             startEquipmentCheckContainer.Add(new CoolCamera(cameraMediator) {
-                Temperature = -10, Duration = 5
+                Temperature = sequenceParams.Temperature, Duration = sequenceParams.Duration
             }); // config params
-
-            SequentialContainer startSafeAndSyncContainer = new SequentialContainer();
-            startSafeAndSyncContainer.Add(new SwitchFilter(profileService,
-                filterWheelMediator)); // config params & send list to client
-            startSafeAndSyncContainer.Add(new SlewScopeToRaDec(telescopeMediator, guiderMediator) {
-                Coordinates = new InputCoordinates(new Coordinates(Angle.ByDegree(AstroUtil.HMSToDegrees("00:00:00")),
-                    Angle.ByDegree(AstroUtil.DMSToDegrees("0° 00' 00\"")), Epoch.JNOW))
-            }); // config params
-            startSafeAndSyncContainer.Add(new RunAutofocus(profileService, imageHistoryVm, cameraMediator,
-                filterWheelMediator, focuserMediator, autoFocusVmFactory));
-            startSafeAndSyncContainer.Add(new SolveAndSync(profileService, telescopeMediator, rotatorMediator,
-                imagingMediator, filterWheelMediator, plateSolverFactory, windowServiceFactory));
 
             startMainContainer.Add(startEquipmentCheckContainer);
-            startMainContainer.Add(startSafeAndSyncContainer);
             return startMainContainer.Execute(this, cancellationToken);
         }
 
-        public Task RunImagingSequence(CancellationToken cancellationToken) {
+        public Task RunImagingSequence(ImagingSequenceParams sequenceParams, CancellationToken cancellationToken) {
             DeepSkyObjectContainer targetMainContainer = new DeepSkyObjectContainer(profileService,
                 nighttimeCalculator, framingAssistantVm, applicationMediator, planetariumFactory, cameraMediator,
                 filterWheelMediator) {
                 Target = new InputTarget(Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Latitude),
                     Angle.ByDegree(profileService.ActiveProfile.AstrometrySettings.Longitude),
                     profileService.ActiveProfile.AstrometrySettings.Horizon) {
-                    TargetName = "Test",
-                    Rotation = 0,
+                    TargetName = sequenceParams.Name,
+                    Rotation = sequenceParams.Rotation,
                     InputCoordinates = new InputCoordinates(new Coordinates(
-                        Angle.ByDegree(AstroUtil.HMSToDegrees("02:03:23")),
-                        Angle.ByDegree(AstroUtil.DMSToDegrees("33° 30' 3\"")), Epoch.JNOW))
+                        Angle.ByDegree(AstroUtil.HMSToDegrees(sequenceParams.Ra)),
+                        Angle.ByDegree(AstroUtil.DMSToDegrees(sequenceParams.Dec)), Epoch.JNOW))
                 }
             };
             targetMainContainer.Add(new MeridianFlipTrigger(profileService, cameraMediator, telescopeMediator,
                 focuserMediator, applicationStatusMediator, meridianFlipVmFactory));
-            targetMainContainer.Add(new CenterAfterDriftTrigger(profileService, telescopeMediator, filterWheelMediator,
-                guiderMediator, imagingMediator, cameraMediator, domeMediator, domeFollower, imageSaveMediator,
-                applicationStatusMediator) { AfterExposures = 1, DistanceArcMinutes = 3 }); // require config
             targetMainContainer.Add(new RestoreGuiding(guiderMediator));
 
             SequentialContainer targetEquipmentCheckContainer = new SequentialContainer();
-            targetEquipmentCheckContainer.Add(new WaitForTime(dateTimeProviders)); // require config
             targetEquipmentCheckContainer.Add(new UnparkScope(telescopeMediator));
             targetEquipmentCheckContainer.Add(
                 new SetTracking(telescopeMediator) { TrackingMode = TrackingMode.Sidereal }); // require config
-            targetEquipmentCheckContainer.Add(new CoolCamera(cameraMediator) {
-                Temperature = -10, Duration = 5
-            }); // require config
 
             SequentialContainer targetPrepareContainer = new SequentialContainer();
-            targetPrepareContainer.Add(new SwitchFilter(profileService, filterWheelMediator) { }); // require config
             targetPrepareContainer.Add(new Center(profileService, telescopeMediator, imagingMediator,
                 filterWheelMediator, guiderMediator, domeMediator, domeFollower, plateSolverFactory,
                 windowServiceFactory));
-            targetPrepareContainer.Add(new StartGuiding(guiderMediator) { ForceCalibration = false }); // require config
+            targetPrepareContainer.Add(
+                new StartGuiding(guiderMediator) {
+                    ForceCalibration = sequenceParams.IsForceCalibration
+                }); // require config
             targetPrepareContainer.Add(new RunAutofocus(profileService, imageHistoryVm, cameraMediator,
                 filterWheelMediator, focuserMediator, autoFocusVmFactory));
 
             SequentialContainer imagingContainer = new SequentialContainer();
-            imagingContainer.Add(new AutofocusAfterHFRIncreaseTrigger(profileService, imageHistoryVm, cameraMediator,
-                filterWheelMediator, focuserMediator, autoFocusVmFactory) {
-                Amount = 10, SampleSize = 5
-            }); // require config
-            imagingContainer.Add(new TimeCondition(dateTimeProviders)); // require config
             imagingContainer.Add(new AboveHorizonCondition(profileService));
-            imagingContainer.Add(new SmartExposure(
-                null,
-                new SwitchFilter(profileService, filterWheelMediator),
-                new TakeExposure(profileService, cameraMediator, imagingMediator, imageSaveMediator, imageHistoryVm) {
-                    ExposureTime = 5
-                },
-                new LoopCondition { Iterations = 3 },
-                new DitherAfterExposures(guiderMediator, imageHistoryVm, profileService) { AfterExposures = 0 }
-            )); // require config
+            foreach (ExposureItem exposureItem in sequenceParams.ExposureItems) {
+                BinningMode.TryParse(exposureItem.Binning, out BinningMode mode);
+                FilterInfo filterInfo = profileService.ActiveProfile.FilterWheelSettings.FilterWheelFilters.ToList()
+                    .Find(filter => filter.Position == exposureItem.FilterPosition);
+                imagingContainer.Add(new SmartExposure(
+                    null,
+                    new SwitchFilter(profileService, filterWheelMediator) { Filter = filterInfo },
+                    new TakeExposure(profileService, cameraMediator, imagingMediator, imageSaveMediator,
+                        imageHistoryVm) {
+                        ExposureTime = exposureItem.Time,
+                        Gain = exposureItem.Gain,
+                        Binning = mode,
+                        ImageType = exposureItem.ImageType
+                    },
+                    new LoopCondition { Iterations = exposureItem.Amount },
+                    new DitherAfterExposures(guiderMediator, imageHistoryVm, profileService) { AfterExposures = 0 }
+                )); // require config   
+            }
+
             imagingContainer.Add(new Dither(guiderMediator, profileService));
 
             targetMainContainer.Add(targetEquipmentCheckContainer);
-            targetMainContainer.Add(new WaitForTime(dateTimeProviders)); // require config
-            targetMainContainer.Add(new WaitUntilAboveHorizon(profileService));
             targetMainContainer.Add(targetPrepareContainer);
             targetMainContainer.Add(imagingContainer);
             targetMainContainer.Add(new StopGuiding(guiderMediator));
             return targetMainContainer.Execute(null, cancellationToken);
         }
 
-        public Task RunEndSequence(CancellationToken cancellationToken) {
+        public Task RunEndSequence(EndSequenceParams sequenceParams, CancellationToken cancellationToken) {
             SequentialContainer endMainContainer = new SequentialContainer();
 
             ParallelContainer endInstructions = new ParallelContainer();
-            endInstructions.Add(new WarmCamera(cameraMediator) { Duration = 5 }); // config params
+            endInstructions.Add(new WarmCamera(cameraMediator) { Duration = sequenceParams.Duration }); // config params
             endInstructions.Add(new ParkScope(telescopeMediator, guiderMediator));
 
             endMainContainer.Add(endInstructions);
@@ -196,6 +177,34 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
 
         public void Report(ApplicationStatus value) {
             Notification.ShowInformation(value.ToString());
+        }
+
+        public struct StartSequenceParams {
+            public double Temperature { get; set; }
+            public double Duration { get; set; }
+        }
+
+        public struct ImagingSequenceParams {
+            public string Name { get; set; }
+            public double Rotation { get; set; }
+            public string Ra { get; set; }
+            public string Dec { get; set; }
+            public int TrackingMode { get; set; }
+            public bool IsForceCalibration { get; set; }
+            public IList<ExposureItem> ExposureItems { get; set; }
+        }
+
+        public struct ExposureItem {
+            public int Gain { get; set; }
+            public double Time { get; set; }
+            public int Amount { get; set; }
+            public string Binning { get; set; }
+            public string ImageType { get; set; }
+            public int FilterPosition { get; set; }
+        }
+
+        public struct EndSequenceParams {
+            public double Duration { get; set; }
         }
     }
 }
