@@ -10,7 +10,6 @@ using NINA.Core.Utility.Notification;
 using NINA.Core.Utility.WindowService;
 using NINA.Equipment.Interfaces;
 using NINA.Equipment.Interfaces.Mediator;
-using NINA.Equipment.Interfaces.ViewModel;
 using NINA.PlateSolving.Interfaces;
 using NINA.Plugin;
 using NINA.Plugin.Interfaces;

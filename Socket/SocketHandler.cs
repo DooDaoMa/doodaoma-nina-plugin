@@ -1,11 +1,8 @@
 ﻿using Doodaoma.NINA.Doodaoma.Manager;
 using Doodaoma.NINA.Doodaoma.Socket.Models;
 using Newtonsoft.Json.Linq;
-using NINA.Core.API.SGP;
 using NINA.Core.Utility.Notification;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 
 namespace Doodaoma.NINA.Doodaoma.Socket {
