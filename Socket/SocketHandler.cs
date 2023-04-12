@@ -1,8 +1,11 @@
 ﻿using Doodaoma.NINA.Doodaoma.Manager;
 using Doodaoma.NINA.Doodaoma.Socket.Models;
 using Newtonsoft.Json.Linq;
+using NINA.Core.API.SGP;
 using NINA.Core.Utility.Notification;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace Doodaoma.NINA.Doodaoma.Socket {
@@ -13,7 +16,7 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
         public event EventHandler<string> UserIdChangeEvent;
         public event EventHandler UserDisconnectedEvent;
         public event EventHandler CapturingEvent;
-        public event EventHandler GetFilterWheelOptionsEvent; 
+        public event EventHandler GetFilterWheelOptionsEvent;
 
         public SocketHandler(SequenceManager sequenceManager) {
             this.sequenceManager = sequenceManager;
@@ -38,27 +41,41 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                     GetFilterWheelOptionsEvent?.Invoke(this, EventArgs.Empty);
                     break;
                 }
-                case "runStartSequence": {
-                    try {
-                        await sequenceManager.RunStartSequence(CancellationToken.None);
-                    } catch (Exception e) { 
-                        Notification.ShowError(e.ToString());
-                    }
-
-                    break;
-                }
                 case "runImagingSequence": {
                     try {
-                        await sequenceManager.RunImagingSequence(CancellationToken.None);
-                    } catch (Exception e) {
-                        Notification.ShowError(e.ToString());
-                    }
-
-                    break;
-                }
-                case "runEndSequence": {
-                    try {
-                        await sequenceManager.RunEndSequence(CancellationToken.None);
+                        RunImagingSequencePayload payload =
+                            parsedMessage["payload"]?.ToObject<RunImagingSequencePayload>();
+                        Ra ra = payload?.ImagingSequence.Target.Ra ??
+                                new Ra { Hours = "00", Minutes = "00", Seconds = "00" };
+                        Dec dec = payload?.ImagingSequence.Target.Dec ??
+                                  new Dec { Degrees = "90", Minutes = "00", Seconds = "00" };
+                        await sequenceManager.RunStartSequence(
+                            new SequenceManager.StartSequenceParams {
+                                Temperature = payload?.StartSequence.Cooling.Temperature ?? 0,
+                                Duration = payload?.StartSequence.Cooling.Duration ?? 0
+                            },
+                            CancellationToken.None);
+                        await sequenceManager.RunImagingSequence(
+                            new SequenceManager.ImagingSequenceParams {
+                                Name = payload?.ImagingSequence.Target.Name ?? "",
+                                Rotation = payload?.ImagingSequence.Target.Rotation ?? 0,
+                                Ra = $"{ra.Hours}:{ra.Minutes}:{ra.Seconds}",
+                                Dec = $"{dec.Degrees}° {dec.Minutes}' {dec.Seconds}\"",
+                                TrackingMode = payload?.ImagingSequence.Tracking.Mode ?? 0,
+                                IsForceCalibration = payload?.ImagingSequence.Guiding.IsForceCalibration ?? false,
+                                ExposureItem = new SequenceManager.ExposureItem {
+                                    Time = payload?.ImagingSequence.Exposure.Time ?? 6,
+                                    Gain = payload?.ImagingSequence.Exposure.Gain ?? 100,
+                                    ImageType = payload?.ImagingSequence.Exposure.ImageType ?? "LIGHT",
+                                    Binning = payload?.ImagingSequence.Exposure.Binning ?? "1x1",
+                                }
+                            },
+                            CancellationToken.None);
+                        await sequenceManager.RunEndSequence(
+                            new SequenceManager.EndSequenceParams {
+                                Duration = payload?.EndSequence.Warming.Duration ?? 0
+                            },
+                            CancellationToken.None);
                     } catch (Exception e) {
                         Notification.ShowError(e.ToString());
                     }

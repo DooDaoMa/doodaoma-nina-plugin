@@ -299,6 +299,7 @@
         <Compile Include="Factory\IFactory.cs" />
         <Compile Include="Manager\SequenceManager.cs" />
         <Compile Include="Socket\Models\CapturePayload.cs" />
+        <Compile Include="Socket\Models\RunImagingSequencePayload.cs" />
         <Compile Include="Socket\Models\SetLimitPayload.cs" />
         <Compile Include="Socket\Models\SetTargetNamePayload.cs" />
         <Compile Include="Socket\Models\SetUserIdPayload.cs" />

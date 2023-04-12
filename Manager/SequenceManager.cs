@@ -1,4 +1,4 @@
-﻿using   NINA.Astrometry;
+using NINA.Astrometry;
 using NINA.Astrometry.Interfaces;
 using NINA.Core.Model;
 using NINA.Core.Model.Equipment;
@@ -12,7 +12,6 @@ using NINA.Sequencer.Conditions;
 using NINA.Sequencer.Container;
 using NINA.Sequencer.SequenceItem.Autofocus;
 using NINA.Sequencer.SequenceItem.Camera;
-using NINA.Sequencer.SequenceItem.FilterWheel;
 using NINA.Sequencer.SequenceItem.Guider;
 using NINA.Sequencer.SequenceItem.Imaging;
 using NINA.Sequencer.SequenceItem.Platesolving;
@@ -25,7 +24,6 @@ using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.ViewModel;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -111,7 +109,8 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
                     Rotation = sequenceParams.Rotation,
                     InputCoordinates = new InputCoordinates(new Coordinates(
                         Angle.ByDegree(AstroUtil.HMSToDegrees(sequenceParams.Ra)),
-                        Angle.ByDegree(AstroUtil.DMSToDegrees(sequenceParams.Dec)), Epoch.JNOW))
+                        Angle.ByDegree(AstroUtil.DMSToDegrees(sequenceParams.Dec)), Epoch.JNOW)
+                    )
                 }
             };
             targetMainContainer.Add(new MeridianFlipTrigger(profileService, cameraMediator, telescopeMediator,
@@ -121,7 +120,9 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
             SequentialContainer targetEquipmentCheckContainer = new SequentialContainer();
             targetEquipmentCheckContainer.Add(new UnparkScope(telescopeMediator));
             targetEquipmentCheckContainer.Add(
-                new SetTracking(telescopeMediator) { TrackingMode = TrackingMode.Sidereal }); // require config
+                new SetTracking(telescopeMediator) {
+                    TrackingMode = (TrackingMode)sequenceParams.TrackingMode
+                }); // require config
 
             SequentialContainer targetPrepareContainer = new SequentialContainer();
             targetPrepareContainer.Add(new Center(profileService, telescopeMediator, imagingMediator,
@@ -135,25 +136,15 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
                 filterWheelMediator, focuserMediator, autoFocusVmFactory));
 
             SequentialContainer imagingContainer = new SequentialContainer();
-            imagingContainer.Add(new AboveHorizonCondition(profileService));
-            foreach (ExposureItem exposureItem in sequenceParams.ExposureItems) {
-                BinningMode.TryParse(exposureItem.Binning, out BinningMode mode);
-                FilterInfo filterInfo = profileService.ActiveProfile.FilterWheelSettings.FilterWheelFilters.ToList()
-                    .Find(filter => filter.Position == exposureItem.FilterPosition);
-                imagingContainer.Add(new SmartExposure(
-                    null,
-                    new SwitchFilter(profileService, filterWheelMediator) { Filter = filterInfo },
-                    new TakeExposure(profileService, cameraMediator, imagingMediator, imageSaveMediator,
-                        imageHistoryVm) {
-                        ExposureTime = exposureItem.Time,
-                        Gain = exposureItem.Gain,
-                        Binning = mode,
-                        ImageType = exposureItem.ImageType
-                    },
-                    new LoopCondition { Iterations = exposureItem.Amount },
-                    new DitherAfterExposures(guiderMediator, imageHistoryVm, profileService) { AfterExposures = 0 }
-                )); // require config   
-            }
+            // imagingContainer.Add(new AboveHorizonCondition(profileService));
+            BinningMode.TryParse(sequenceParams.ExposureItem.Binning, out BinningMode mode);
+            imagingContainer.Add(new TakeExposure(profileService, cameraMediator, imagingMediator, imageSaveMediator,
+                imageHistoryVm) {
+                ExposureTime = sequenceParams.ExposureItem.Time,
+                Gain = sequenceParams.ExposureItem.Gain,
+                Binning = mode,
+                ImageType = sequenceParams.ExposureItem.ImageType
+            });
 
             imagingContainer.Add(new Dither(guiderMediator, profileService));
 
@@ -176,7 +167,7 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
         }
 
         public void Report(ApplicationStatus value) {
-            Notification.ShowInformation(value.ToString());
+            // Notification.ShowInformation(value.ToString());
         }
 
         public struct StartSequenceParams {
@@ -191,16 +182,14 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
             public string Dec { get; set; }
             public int TrackingMode { get; set; }
             public bool IsForceCalibration { get; set; }
-            public IList<ExposureItem> ExposureItems { get; set; }
+            public ExposureItem ExposureItem { get; set; }
         }
 
         public struct ExposureItem {
             public int Gain { get; set; }
             public double Time { get; set; }
-            public int Amount { get; set; }
             public string Binning { get; set; }
             public string ImageType { get; set; }
-            public int FilterPosition { get; set; }
         }
 
         public struct EndSequenceParams {
