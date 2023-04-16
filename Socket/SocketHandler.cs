@@ -11,8 +11,8 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
         private CancellationTokenSource captureCancelTokenSource;
 
         public event EventHandler<string> UserIdChangeEvent;
+        public event EventHandler<bool> UpdateIsBusyEvent;
         public event EventHandler UserDisconnectedEvent;
-        public event EventHandler CapturingEvent;
         public event EventHandler GetFilterWheelOptionsEvent;
 
         public SocketHandler(SequenceManager sequenceManager) {
@@ -39,6 +39,13 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                     break;
                 }
                 case "runImagingSequence": {
+                    if (GetIsBusy()) {
+                        return;
+                    }
+
+                    captureCancelTokenSource = new CancellationTokenSource();
+                    CancellationToken token = captureCancelTokenSource.Token;
+                    UpdateIsBusy(true);
                     try {
                         RunImagingSequencePayload payload =
                             parsedMessage["payload"]?.ToObject<RunImagingSequencePayload>();
@@ -51,7 +58,7 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                                 Temperature = payload?.StartSequence.Cooling.Temperature ?? 0,
                                 Duration = payload?.StartSequence.Cooling.Duration ?? 0
                             },
-                            CancellationToken.None);
+                            token);
                         await sequenceManager.RunImagingSequence(
                             new SequenceManager.ImagingSequenceParams {
                                 Name = payload?.ImagingSequence.Target.Name ?? "",
@@ -67,24 +74,34 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                                     Binning = payload?.ImagingSequence.Exposure.Binning ?? "1x1",
                                 }
                             },
-                            CancellationToken.None);
+                            token);
                         await sequenceManager.RunEndSequence(
                             new SequenceManager.EndSequenceParams {
                                 Duration = payload?.EndSequence.Warming.Duration ?? 0
                             },
-                            CancellationToken.None);
+                            token);
+                        ClearCaptureCancelTokenSource();
                     } catch (Exception e) {
-                        Notification.ShowError(e.ToString());
+                        if (!(e is OperationCanceledException)) {
+                            Notification.ShowError(e.ToString());
+                            ClearCaptureCancelTokenSource();
+                        }
+                    } finally {
+                        UpdateIsBusy(false);
                     }
 
                     break;
                 }
                 case "cancelRunningSequence": {
-                    if (captureCancelTokenSource == null) {
+                    if (!GetIsBusy()) {
                         return;
                     }
 
                     ClearCaptureCancelTokenSource();
+                    break;
+                }
+                case "getIsBusy": {
+                    UpdateIsBusy(GetIsBusy());
                     break;
                 }
             }
@@ -94,6 +111,14 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
             captureCancelTokenSource.Cancel();
             captureCancelTokenSource.Dispose();
             captureCancelTokenSource = null;
+        }
+
+        private void UpdateIsBusy(bool isBusy) {
+            UpdateIsBusyEvent?.Invoke(this, isBusy);
+        }
+
+        private bool GetIsBusy() {
+            return captureCancelTokenSource != null;
         }
     }
 }

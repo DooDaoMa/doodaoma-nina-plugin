@@ -100,7 +100,7 @@ namespace Doodaoma.NINA.Doodaoma {
             handler = new SocketHandler(sequenceManager);
             handler.UserIdChangeEvent += HandlerOnUserIdChangeEvent;
             handler.UserDisconnectedEvent += HandlerOnUserDisconnectedEvent;
-            handler.CapturingEvent += HandlerOnCapturingEvent;
+            handler.UpdateIsBusyEvent += HandlerOnUpdateIsBusyEvent;
             handler.GetFilterWheelOptionsEvent += HandlerOnGetFilterWheelOptionsEvent;
             socketClient.MessageReceived
                 .Where(msg => msg.Text != null)
@@ -127,7 +127,7 @@ namespace Doodaoma.NINA.Doodaoma {
                 HandlerOnGetFilterWheelOptionsEvent;
             handler.UserIdChangeEvent -= HandlerOnUserIdChangeEvent;
             handler.UserDisconnectedEvent -= HandlerOnUserDisconnectedEvent;
-            handler.CapturingEvent -= HandlerOnCapturingEvent;
+            handler.UpdateIsBusyEvent -= HandlerOnUpdateIsBusyEvent;
             handler.ClearCaptureCancelTokenSource();
             socketClient.Dispose();
             httpClient.Dispose();
@@ -164,6 +164,10 @@ namespace Doodaoma.NINA.Doodaoma {
                     }
                 );
                 Notification.ShowInformation(response.Message);
+                JObject message = JObject.FromObject(new {
+                    type = "sendMessage", payload = new { message = "Image saved successfully" }
+                });
+                socketClient.Send(message.ToString());
             } catch (Exception exception) {
                 Notification.ShowError(exception.ToString());
             }
@@ -187,9 +191,9 @@ namespace Doodaoma.NINA.Doodaoma {
             }
         }
 
-        private void HandlerOnCapturingEvent(object sender, EventArgs e) {
+        private void HandlerOnUpdateIsBusyEvent(object sender, bool isBusy) {
             JObject message = JObject.FromObject(new {
-                type = "sendMessage", payload = new { message = "Camera is busy" }
+                type = "updateIsBusy", payload = new { isBusy }
             });
             socketClient.Send(message.ToString());
         }
