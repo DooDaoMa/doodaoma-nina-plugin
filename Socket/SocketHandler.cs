@@ -19,7 +19,7 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
         }
 
         public async void HandleMessage(string message) {
-            Notification.ShowInformation(message);
+            Notification.ShowInformation(message, TimeSpan.FromSeconds(3));
             JObject parsedMessage = JObject.Parse(message);
             string type = (string)parsedMessage["type"];
 

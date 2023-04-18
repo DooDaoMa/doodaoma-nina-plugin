@@ -181,7 +181,6 @@ namespace Doodaoma.NINA.Doodaoma {
 
         private void HandlerOnUserIdChangeEvent(object sender, string userId) {
             currentUserId = userId;
-            Notification.ShowInformation("Current user " + currentUserId);
         }
 
         private void HandlerOnUserDisconnectedEvent(object sender, EventArgs e) {
