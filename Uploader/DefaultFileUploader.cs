@@ -9,6 +9,7 @@ namespace Doodaoma.NINA.Doodaoma.Uploader {
     public class DefaultFileUploader : IFileUploader<DefaultFileUploader.Params, UploadFileResponse> {
         private const string KeyUserId = "userId";
         private const string KeyImageFile = "imageFile";
+        private const string KeyDisplayName = "displayName";
         private readonly HttpClient httpClient;
 
         public DefaultFileUploader(HttpClient httpClient) {
@@ -24,7 +25,8 @@ namespace Doodaoma.NINA.Doodaoma.Uploader {
                         fileParams.Content.Length
                     ),
                     KeyImageFile, fileParams.Name
-                }
+                },
+                { new StringContent(fileParams.DisplayName), KeyDisplayName }
             };
             HttpResponseMessage response =
                 await httpClient.PostAsync(Settings.Default.ServerUrl + "/api/images", form);
@@ -42,6 +44,8 @@ namespace Doodaoma.NINA.Doodaoma.Uploader {
             public string UserId { get; set; }
             public byte[] Content { get; set; }
             public string Name { get; set; }
+
+            public string DisplayName { get; set; }
         }
     }
 }

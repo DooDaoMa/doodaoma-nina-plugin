@@ -82,12 +82,11 @@ namespace Doodaoma.NINA.Doodaoma {
             this.imageSaveMediator = imageSaveMediator;
             this.imageSaveMediator.ImageSaved += ImageSaveMediatorOnImageSaved;
             this.profileService = profileService;
-            this.profileService.ActiveProfile.FilterWheelSettings.FilterWheelFilters.CollectionChanged +=
-                HandlerOnGetFilterWheelOptionsEvent;
 
             ICameraInfoProvider cameraInfoProvider = new FakeCameraInfoProvider();
             socketClient = new SocketClientFactory(cameraInfoProvider).Create();
             httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromMinutes(10);
             fileUploader = new DefaultFileUploader(httpClient);
             SequenceManager sequenceManager = new SequenceManager(dateTimeProviders, telescopeMediator, cameraMediator,
                 profileService, filterWheelMediator, guiderMediator, imageHistoryVm, focuserMediator,
@@ -101,7 +100,6 @@ namespace Doodaoma.NINA.Doodaoma {
             handler.UserIdChangeEvent += HandlerOnUserIdChangeEvent;
             handler.UserDisconnectedEvent += HandlerOnUserDisconnectedEvent;
             handler.UpdateIsBusyEvent += HandlerOnUpdateIsBusyEvent;
-            handler.GetFilterWheelOptionsEvent += HandlerOnGetFilterWheelOptionsEvent;
             socketClient.MessageReceived
                 .Where(msg => msg.Text != null)
                 .Where(msg => msg.Text.StartsWith("{") && msg.Text.EndsWith("}"))
@@ -123,8 +121,6 @@ namespace Doodaoma.NINA.Doodaoma {
 
         public override Task Teardown() {
             imageSaveMediator.ImageSaved -= ImageSaveMediatorOnImageSaved;
-            profileService.ActiveProfile.FilterWheelSettings.FilterWheelFilters.CollectionChanged -=
-                HandlerOnGetFilterWheelOptionsEvent;
             handler.UserIdChangeEvent -= HandlerOnUserIdChangeEvent;
             handler.UserDisconnectedEvent -= HandlerOnUserDisconnectedEvent;
             handler.UpdateIsBusyEvent -= HandlerOnUpdateIsBusyEvent;
@@ -139,7 +135,7 @@ namespace Doodaoma.NINA.Doodaoma {
             Notification.ShowInformation(e ? "Connected" : "Not connected");
         }
 
-        private async void ImageSaveMediatorOnImageSaved(object sender, ImageSavedEventArgs e) {
+        private void ImageSaveMediatorOnImageSaved(object sender, ImageSavedEventArgs e) {
             if (!isConnected) {
                 return;
             }
@@ -147,54 +143,39 @@ namespace Doodaoma.NINA.Doodaoma {
             if (currentUserId == null) {
                 return;
             }
+            
+            Task.Run(async () => {
+                try {
+                    byte[] fileBytes;
 
-            try {
-                byte[] fileBytes;
+                    BitmapEncoder encoder = new PngBitmapEncoder();
+                    using (MemoryStream stream = new MemoryStream()) {
+                        encoder.Frames.Add(BitmapFrame.Create(e.Image));
+                        encoder.Save(stream);
+                        fileBytes = stream.ToArray();
+                    }
 
-                BitmapEncoder encoder = new PngBitmapEncoder();
-                using (MemoryStream stream = new MemoryStream()) {
-                    encoder.Frames.Add(BitmapFrame.Create(e.Image));
-                    encoder.Save(stream);
-                    fileBytes = stream.ToArray();
+                    UploadFileResponse response = await fileUploader.Upload(
+                        new DefaultFileUploader.Params {
+                            UserId = currentUserId,
+                            Content = fileBytes,
+                            Name = Path.GetFileNameWithoutExtension(e.PathToImage.AbsolutePath) + ".png",
+                            DisplayName = e.MetaData.Target.Name
+                        }
+                    );
+                    Notification.ShowInformation(response.Message);
+                    JObject message = JObject.FromObject(new {
+                        type = "sendMessage", payload = new { message = "Image saved successfully" }
+                    });
+                    socketClient.Send(message.ToString());
+                } catch (Exception exception) {
+                    Notification.ShowError(exception.ToString());
                 }
-
-                UploadFileResponse response = await fileUploader.Upload(
-                    new DefaultFileUploader.Params {
-                        UserId = currentUserId, Content = fileBytes, Name = Path.GetFileName(e.PathToImage.AbsolutePath)
-                    }
-                );
-                Notification.ShowInformation(response.Message);
-                JObject message = JObject.FromObject(new {
-                    type = "sendMessage", payload = new { message = "Image saved successfully" }
-                });
-                socketClient.Send(message.ToString());
-            } catch (Exception exception) {
-                Notification.ShowError(exception.ToString());
-            }
-        }
-
-        private void HandlerOnGetFilterWheelOptionsEvent(object sender, EventArgs e) {
-            if (e is NotifyCollectionChangedEventArgs args) {
-                JObject filterWheels = JObject.FromObject(new {
-                    type = "updateFilterWheelOptions",
-                    payload = new { options = args.NewItems }
-                });
-                socketClient.Send(filterWheels.ToString());
-            } else {
-                JObject filterWheels = JObject.FromObject(new {
-                    type = "updateFilterWheelOptions",
-                    payload = new {
-                        options = profileService.ActiveProfile.FilterWheelSettings.FilterWheelFilters.ToList()
-                    }
-                });
-                socketClient.Send(filterWheels.ToString());
-            }
+            });
         }
 
         private void HandlerOnUpdateIsBusyEvent(object sender, bool isBusy) {
-            JObject message = JObject.FromObject(new {
-                type = "updateIsBusy", payload = new { isBusy }
-            });
+            JObject message = JObject.FromObject(new { type = "updateIsBusy", payload = new { isBusy } });
             socketClient.Send(message.ToString());
         }
 

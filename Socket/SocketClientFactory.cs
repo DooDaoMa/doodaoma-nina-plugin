@@ -15,7 +15,9 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
         }
 
         public WebsocketClient Create() {
-            return new WebsocketClient(BuildSocketConnectionUri());
+            return new WebsocketClient(BuildSocketConnectionUri()) {
+                ReconnectTimeout = TimeSpan.FromMinutes(3)
+            };
         }
 
         private Uri BuildSocketConnectionUri() {

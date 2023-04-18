@@ -13,7 +13,6 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
         public event EventHandler<string> UserIdChangeEvent;
         public event EventHandler<bool> UpdateIsBusyEvent;
         public event EventHandler UserDisconnectedEvent;
-        public event EventHandler GetFilterWheelOptionsEvent;
 
         public SocketHandler(SequenceManager sequenceManager) {
             this.sequenceManager = sequenceManager;
@@ -34,10 +33,6 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                     UserDisconnectedEvent?.Invoke(this, EventArgs.Empty);
                     break;
                 }
-                case "getFilterWheelOptions": {
-                    GetFilterWheelOptionsEvent?.Invoke(this, EventArgs.Empty);
-                    break;
-                }
                 case "runImagingSequence": {
                     if (GetIsBusy()) {
                         return;
@@ -53,6 +48,7 @@ namespace Doodaoma.NINA.Doodaoma.Socket {
                                 new Ra { Hours = "00", Minutes = "00", Seconds = "00" };
                         Dec dec = payload?.ImagingSequence.Target.Dec ??
                                   new Dec { Degrees = "90", Minutes = "00", Seconds = "00" };
+                        
                         await sequenceManager.RunStartSequence(
                             new SequenceManager.StartSequenceParams {
                                 Temperature = payload?.StartSequence.Cooling.Temperature ?? 0,

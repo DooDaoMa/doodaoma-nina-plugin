@@ -14,8 +14,6 @@ using NINA.Sequencer.SequenceItem.Guider;
 using NINA.Sequencer.SequenceItem.Imaging;
 using NINA.Sequencer.SequenceItem.Platesolving;
 using NINA.Sequencer.SequenceItem.Telescope;
-using NINA.Sequencer.Trigger.Guider;
-using NINA.Sequencer.Trigger.MeridianFlip;
 using NINA.Sequencer.Utility.DateTimeProvider;
 using NINA.WPF.Base.Interfaces;
 using NINA.WPF.Base.Interfaces.Mediator;
@@ -88,9 +86,9 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
 
             SequentialContainer startEquipmentCheckContainer = new SequentialContainer();
             startEquipmentCheckContainer.Add(new UnparkScope(telescopeMediator));
-            startEquipmentCheckContainer.Add(new CoolCamera(cameraMediator) {
-                Temperature = sequenceParams.Temperature, Duration = sequenceParams.Duration
-            }); // config params
+            // startEquipmentCheckContainer.Add(new CoolCamera(cameraMediator) {
+            //     Temperature = sequenceParams.Temperature, Duration = sequenceParams.Duration
+            // }); // config params
 
             startMainContainer.Add(startEquipmentCheckContainer);
             return startMainContainer.Execute(this, cancellationToken);
@@ -111,9 +109,9 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
                     )
                 }
             };
-            targetMainContainer.Add(new MeridianFlipTrigger(profileService, cameraMediator, telescopeMediator,
-                focuserMediator, applicationStatusMediator, meridianFlipVmFactory));
-            targetMainContainer.Add(new RestoreGuiding(guiderMediator));
+            // targetMainContainer.Add(new MeridianFlipTrigger(profileService, cameraMediator, telescopeMediator,
+            //     focuserMediator, applicationStatusMediator, meridianFlipVmFactory));
+            // targetMainContainer.Add(new RestoreGuiding(guiderMediator));
 
             SequentialContainer targetEquipmentCheckContainer = new SequentialContainer();
             targetEquipmentCheckContainer.Add(new UnparkScope(telescopeMediator));
@@ -144,7 +142,7 @@ namespace Doodaoma.NINA.Doodaoma.Manager {
                 ImageType = sequenceParams.ExposureItem.ImageType
             });
 
-            imagingContainer.Add(new Dither(guiderMediator, profileService));
+            // imagingContainer.Add(new Dither(guiderMediator, profileService));
 
             targetMainContainer.Add(targetEquipmentCheckContainer);
             targetMainContainer.Add(targetPrepareContainer);
